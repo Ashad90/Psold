@@ -1,0 +1,159 @@
+# =====================================================
+# Codemagic CI/CD Configuration - Psold App
+# =====================================================
+# Ce fichier configure automatiquement :
+# - Build Android (APK + App Bundle)
+# - Build iOS (IPA)
+# - Tests automatisés
+# - Déploiement sur Play Store ( Android) / App Store (iOS)
+# =====================================================
+
+workflows:
+  # ─────────────────────────────────────────────
+  # ANDROID — Build Debug (test rapide)
+  # ─────────────────────────────────────────────
+  android-debug:
+    name: Android Debug
+    instance_type: windows_x2
+    max_build_duration: 30
+    environment:
+      flutter: stable
+      groups:
+        - supabase_credentials
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Run tests
+        script: flutter test
+      - name: Build debug APK
+        script: flutter build apk --debug --target-platform android-arm64
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+
+  # ─────────────────────────────────────────────
+  # ANDROID — Build Release (Play Store)
+  # ─────────────────────────────────────────────
+  android-release:
+    name: Android Release
+    instance_type: windows_x2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      groups:
+        - supabase_credentials
+        - google_play_credentials
+        - keystore
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Decode keystore
+        script: |
+          echo $ANDROID_KEYSTORE | base64 --decode > android/app/upload-keystore.jks
+      - name: Configure signing
+        script: |
+          echo "storePassword=$KEYSTORE_STORE_PASSWORD" > android/key.properties
+          echo "keyPassword=$KEYSTORE_KEY_PASSWORD" >> android/key.properties
+          echo "keyAlias=$KEYSTORE_KEY_ALIAS" >> android/key.properties
+          echo "storeFile=upload-keystore.jks" >> android/key.properties
+      - name: Build release APK (arm64 + armeabi-v7a)
+        script: flutter build apk --release --split-per-abi
+      - name: Build release App Bundle
+        script: flutter build appbundle --release
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/bundle/release/*.aab
+    publishing:
+      google_play:
+        credentials: $GOOGLE_PLAY_JSON_KEY
+        track: production
+        release_status: completed
+
+  # ─────────────────────────────────────────────
+  # ANDROID — Build armeabi-v7a uniquement (app store local)
+  # ─────────────────────────────────────────────
+  android-arm32:
+    name: Android ARM32 (armeabi-v7a)
+    instance_type: windows_x2
+    max_build_duration: 45
+    environment:
+      flutter: stable
+      groups:
+        - supabase_credentials
+        - keystore
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Decode keystore
+        script: |
+          echo $ANDROID_KEYSTORE | base64 --decode > android/app/upload-keystore.jks
+      - name: Build release armeabi-v7a
+        script: flutter build apk --release --target-platform android-armeabi-v7a
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+
+  # ─────────────────────────────────────────────
+  # iOS — Build Release (App Store)
+  # ─────────────────────────────────────────────
+  ios-release:
+    name: iOS Release
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      groups:
+        - supabase_credentials
+        - app_store_credentials
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/Library/Developer/Xcode/DerivedData
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Configure code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "com.example.psold" --type IOS_APP_STORE_CONNECT
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build iOS release IPA
+        script: flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+
+  # ─────────────────────────────────────────────
+  # TEST — Lints + tests sans build (rapide)
+  # ─────────────────────────────────────────────
+  pr-checks:
+    name: PR Checks
+    instance_type: windows_x2
+    max_build_duration: 15
+    triggering:
+      events:
+        - pull_request
+      branch_patterns:
+        - pattern: '*'
+    environment:
+      flutter: stable
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Run flutter analyze
+        script: flutter analyze
+      - name: Run tests
+        script: flutter test

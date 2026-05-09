@@ -1,0 +1,11 @@
+flutter_native_splash:
+  color: "#FDF5E6"
+  image: assets/images/psold_logo.png
+  color_dark: "#FDF5E6"
+  image_dark: assets/images/psold_logo.png
+  android_12:
+    image: assets/images/psold_logo.png
+    color: "#FDF5E6"
+    image_dark: assets/images/psold_logo.png
+    color_dark: "#FDF5E6"
+  web: false
