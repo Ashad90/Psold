@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:psold/shared/widgets/_role_card.dart';
 import 'package:psold/core/theme.dart';
 import 'package:go_router/go_router.dart';
 
-class RegisterChoiceScreen extends ConsumerWidget {
+class RegisterChoiceScreen extends StatelessWidget {
   const RegisterChoiceScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: PsoldColors.backgroundLight,
       body: SafeArea(
@@ -61,10 +60,7 @@ class RegisterChoiceScreen extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    'Déjà un compte ? ',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
+                  Text("Déjà un compte ? ", style: Theme.of(context).textTheme.bodyMedium),
                   GestureDetector(
                     onTap: () => context.go('/login'),
                     child: Text(

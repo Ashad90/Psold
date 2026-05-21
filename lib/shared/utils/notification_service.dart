@@ -1,6 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:psold/core/router.dart';
+
+const _settingsBox = 'settings';
+const _notificationsAskedKey = 'notifications_asked';
+const _notificationPermissionKey = 'notification_permission_granted';
+
+enum NotificationSound {
+  newProduct,
+  like,
+  comment,
+  general,
+}
 
 class NotificationService {
   final Ref _ref;
@@ -8,9 +20,30 @@ class NotificationService {
 
   NotificationService(this._ref);
 
+  Future<bool> hasUserDecidedNotifications() async {
+    final box = Hive.box(_settingsBox);
+    return box.get(_notificationsAskedKey, defaultValue: false) as bool;
+  }
+
+  Future<void> markNotificationsAsked() async {
+    final box = Hive.box(_settingsBox);
+    await box.put(_notificationsAskedKey, true);
+  }
+
   Future<void> initialize() async {
     if (_initialized) return;
 
+    final hasDecided = await hasUserDecidedNotifications();
+
+    if (hasDecided) {
+      await _setupMessageHandlers();
+      await _subscribeToTopics();
+    }
+
+    _initialized = true;
+  }
+
+  Future<bool> requestPermission() async {
     final messaging = FirebaseMessaging.instance;
 
     final settings = await messaging.requestPermission(
@@ -19,22 +52,34 @@ class NotificationService {
       badge: true,
       carPlay: false,
       criticalAlert: false,
-      provisional: false,
+      provisional: true,
       sound: true,
     );
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+    final granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional;
+
+    if (granted) {
+      await markNotificationsAsked();
       await _setupMessageHandlers();
       await _subscribeToTopics();
+
+      final box = Hive.box(_settingsBox);
+      await box.put(_notificationPermissionKey, true);
     }
 
-    _initialized = true;
+    return granted;
+  }
+
+  Future<bool> isPermissionGranted() async {
+    final box = Hive.box(_settingsBox);
+    return box.get(_notificationPermissionKey, defaultValue: false) as bool;
   }
 
   Future<void> _setupMessageHandlers() async {
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
-    
+
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
       _handleMessage(initialMessage);
@@ -42,7 +87,8 @@ class NotificationService {
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
-    _showLocalNotification(message);
+    final soundType = message.data['sound'] as String?;
+    _showLocalNotification(message, soundType);
   }
 
   void _handleMessageOpenedApp(RemoteMessage message) {
@@ -68,14 +114,14 @@ class NotificationService {
     }
   }
 
-  void _showLocalNotification(RemoteMessage message) {
-    // Local notifications handled by system when app is in foreground
-    // For custom handling, use flutter_local_notifications package
+  void _showLocalNotification(RemoteMessage message, String? soundType) {
+    // For custom ringtones, use flutter_local_notifications with audio files
+    // Place custom sounds in: assets/sounds/
+    // Files: new_product.mp3, like.mp3, comment.mp3, notification.mp3
   }
 
   void _navigateToProduct(String productId) {
     // Navigation will be handled by the app's router
-    // The notification payload contains the product ID
   }
 
   void _navigateToFeed() {
@@ -84,15 +130,15 @@ class NotificationService {
 
   Future<void> _subscribeToTopics() async {
     final messaging = FirebaseMessaging.instance;
-    
-    // Subscribe to general topic for all users
+
     await messaging.subscribeToTopic('new_products');
-    
-    // User-specific topics will be subscribed based on user role
+
     final profile = _ref.read(currentUserProvider);
     if (profile != null) {
       if (profile.isMerchant) {
         await messaging.subscribeToTopic('merchant_updates');
+        await messaging.subscribeToTopic('merchant_comments');
+        await messaging.subscribeToTopic('merchant_likes');
       } else {
         await messaging.subscribeToTopic('client_notifications');
       }

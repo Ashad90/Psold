@@ -24,22 +24,41 @@ class PsoldSpacing {
 }
 
 TextTheme _buildTextTheme(TextTheme base) {
-  return GoogleFonts.spaceGroteskTextTheme(base).copyWith(
-    displayLarge: const TextStyle(fontSize: 57, fontWeight: FontWeight.w800, letterSpacing: -1.5),
-    displayMedium: const TextStyle(fontSize: 45, fontWeight: FontWeight.w800, letterSpacing: -1.0),
-    displaySmall: const TextStyle(fontSize: 36, fontWeight: FontWeight.w700, letterSpacing: -0.5),
-    headlineLarge: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700),
-    headlineMedium: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-    headlineSmall: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
-    titleLarge: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-    titleMedium: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: 0.15),
-    titleSmall: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1),
-    bodyLarge: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
-    bodyMedium: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: 0.25),
-    bodySmall: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400, letterSpacing: 0.4),
-    labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.1),
-    labelSmall: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 0.5),
-  );
+  try {
+    return GoogleFonts.spaceGroteskTextTheme(base).copyWith(
+      displayLarge: const TextStyle(fontSize: 57, fontWeight: FontWeight.w800, letterSpacing: -1.5),
+      displayMedium: const TextStyle(fontSize: 45, fontWeight: FontWeight.w800, letterSpacing: -1.0),
+      displaySmall: const TextStyle(fontSize: 36, fontWeight: FontWeight.w700, letterSpacing: -0.5),
+      headlineLarge: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700),
+      headlineMedium: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+      headlineSmall: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+      titleLarge: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+      titleMedium: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: 0.15),
+      titleSmall: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1),
+      bodyLarge: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+      bodyMedium: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: 0.25),
+      bodySmall: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400, letterSpacing: 0.4),
+      labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.1),
+      labelSmall: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 0.5),
+    );
+  } catch (e) {
+    return base.copyWith(
+      displayLarge: const TextStyle(fontSize: 57, fontWeight: FontWeight.w800, letterSpacing: -1.5),
+      displayMedium: const TextStyle(fontSize: 45, fontWeight: FontWeight.w800, letterSpacing: -1.0),
+      displaySmall: const TextStyle(fontSize: 36, fontWeight: FontWeight.w700, letterSpacing: -0.5),
+      headlineLarge: const TextStyle(fontSize: 32, fontWeight: FontWeight.w700),
+      headlineMedium: const TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
+      headlineSmall: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+      titleLarge: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+      titleMedium: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: 0.15),
+      titleSmall: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1),
+      bodyLarge: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+      bodyMedium: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: 0.25),
+      bodySmall: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400, letterSpacing: 0.4),
+      labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.1),
+      labelSmall: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 0.5),
+    );
+  }
 }
 
 final psoldLightTheme = ThemeData(

@@ -9,6 +9,7 @@ import 'package:psold/features/auth/presentation/register_choice_screen.dart';
 import 'package:psold/features/auth/presentation/register_merchant_screen.dart';
 import 'package:psold/features/auth/presentation/register_client_screen.dart';
 import 'package:psold/features/auth/presentation/onboarding_screen.dart';
+import 'package:psold/features/auth/presentation/google_profile_setup_screen.dart';
 import 'package:psold/features/feed/presentation/feed_screen.dart';
 import 'package:psold/features/upload/presentation/upload_screen.dart';
 import 'package:psold/features/product/presentation/product_detail_screen.dart';
@@ -18,6 +19,7 @@ import 'package:psold/features/notifications/presentation/notifications_screen.d
 import 'package:psold/features/settings/presentation/settings_screen.dart';
 import 'package:psold/features/settings/presentation/profile_screen.dart';
 import 'package:psold/features/search/presentation/search_screen.dart';
+import 'package:psold/shared/utils/location_service.dart';
 
 final supabaseClientProvider = Provider<SupabaseClient>((ref) => PsoldSupabaseClient.instance.client);
 
@@ -30,6 +32,17 @@ final currentUserProvider = StateNotifierProvider<CurrentUserNotifier, UserProfi
   return CurrentUserNotifier(ref);
 });
 
+final merchantBackgroundLocationProvider = Provider<void>((ref) {
+  ref.listen<UserProfile?>(currentUserProvider, (previous, next) {
+    final locationNotifier = ref.read(locationProvider.notifier);
+    if (next != null && next.isMerchant) {
+      locationNotifier.startBackgroundTracking();
+    } else {
+      locationNotifier.stopBackgroundTracking();
+    }
+  });
+});
+
 class UserProfile {
   final String id;
   final String role;
@@ -37,6 +50,7 @@ class UserProfile {
   final String? whatsapp;
   final String? avatarUrl;
   final String? city;
+  final DateTime? lastActive;
 
   const UserProfile({
     required this.id,
@@ -45,6 +59,7 @@ class UserProfile {
     this.whatsapp,
     this.avatarUrl,
     this.city,
+    this.lastActive,
   });
 
   bool get isMerchant => role == 'merchant';
@@ -58,7 +73,20 @@ class UserProfile {
       whatsapp: map['whatsapp'] as String?,
       avatarUrl: map['avatar_url'] as String?,
       city: map['city'] as String?,
+      lastActive: map['last_active'] != null ? DateTime.parse(map['last_active'] as String) : null,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'role': role,
+      'display_name': displayName,
+      'whatsapp': whatsapp,
+      'avatar_url': avatarUrl,
+      'city': city,
+      'last_active': lastActive?.toIso8601String(),
+    };
   }
 }
 
@@ -71,10 +99,11 @@ class CurrentUserNotifier extends StateNotifier<UserProfile?> {
 
   void _init() {
     ref.listen(authStateProvider, (previous, next) {
-      next.whenData((authState) {
+      next.whenData((authState) async {
         final session = authState.session;
         if (session != null) {
-          _loadProfile(session.user.id);
+          await _loadProfile(session.user.id);
+          await _updateLastActive();
         } else {
           state = null;
         }
@@ -93,6 +122,30 @@ class CurrentUserNotifier extends StateNotifier<UserProfile?> {
     if (response != null) {
       state = UserProfile.fromMap(Map<String, dynamic>.from(response));
     }
+  }
+
+  Future<void> _updateLastActive() async {
+    if (state == null) return;
+    final supabase = ref.read(supabaseClientProvider);
+    await supabase
+        .from('profiles')
+        .update({'last_active': DateTime.now().toIso8601String()})
+        .eq('id', state!.id);
+    state = UserProfile(
+      id: state!.id,
+      role: state!.role,
+      displayName: state!.displayName,
+      whatsapp: state!.whatsapp,
+      avatarUrl: state!.avatarUrl,
+      city: state!.city,
+      lastActive: DateTime.now(),
+    );
+  }
+
+  bool shouldAutoLogout() {
+    if (state?.lastActive == null) return false;
+    final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+    return state!.lastActive!.isBefore(weekAgo);
   }
 
   Future<void> signOut() async {
@@ -197,29 +250,44 @@ class _NavScaffold extends ConsumerWidget {
 }
 
 final GoRouter router = GoRouter(
+  initialLocation: '/login',
   redirect: (context, state) {
-    final container = ProviderScope.containerOf(context);
+    try {
+      final container = ProviderScope.containerOf(context);
 
-    final authState = container.read(authStateProvider);
-    final profile = container.read(currentUserProvider);
+      final authState = container.read(authStateProvider);
+      final profile = container.read(currentUserProvider);
 
-    final isLoading = authState.isLoading;
-    final session = authState.valueOrNull?.session;
-    final isLoggedIn = session != null;
+      final isLoading = authState.isLoading;
+      final session = authState.valueOrNull?.session;
+      final isLoggedIn = session != null;
+      final isGoogleUser = session?.user.appMetadata['provider'] == 'google';
 
-    final isAuthRoute = state.fullPath == '/login' ||
-        state.fullPath == '/register' ||
-        state.fullPath == '/onboarding';
+      final isAuthRoute = state.fullPath == '/login' ||
+          state.fullPath == '/register' ||
+          state.fullPath == '/register/merchant' ||
+          state.fullPath == '/register/client';
 
-    if (isLoading) return null;
+      if (isLoading) return null;
 
-    if (!isLoggedIn && !isAuthRoute) return '/login';
-    if (isLoggedIn && isAuthRoute && profile == null) return '/onboarding';
-    if (isLoggedIn && isAuthRoute && profile != null) return '/feed';
+      if (!isLoggedIn && !isAuthRoute) return '/login';
+      if (isLoggedIn && isAuthRoute) return '/feed';
 
-    if (profile != null) {
-      if (state.fullPath == '/upload' && !profile.isMerchant) return '/feed';
-      if (state.fullPath?.startsWith('/merchant') == true && !profile.isMerchant) return '/feed';
+      if (isLoggedIn && profile == null && isGoogleUser) {
+        return '/google-profile-setup';
+      }
+
+      if (isLoggedIn && profile == null) return '/onboarding';
+      if (isLoggedIn && profile != null) {
+        final notifier = container.read(currentUserProvider.notifier);
+        if (notifier.shouldAutoLogout()) {
+          notifier.signOut();
+          return '/login';
+        }
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Router redirect error: $e');
     }
 
     return null;
@@ -251,6 +319,11 @@ final GoRouter router = GoRouter(
       path: '/onboarding',
       name: 'onboarding',
       builder: (context, state) => const OnboardingScreen(),
+    ),
+    GoRoute(
+      path: '/google-profile-setup',
+      name: 'googleProfileSetup',
+      builder: (context, state) => const GoogleProfileSetupScreen(),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) => _NavScaffold(navigationShell: navigationShell),

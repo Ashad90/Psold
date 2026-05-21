@@ -15,11 +15,25 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  bool _canContinue = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this);
+    _startAnimation();
+  }
+
+  Future<void> _startAnimation() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      _controller.duration = const Duration(milliseconds: 3500);
+      _controller.forward();
+      await Future.delayed(const Duration(milliseconds: 3500));
+      if (mounted) {
+        setState(() => _canContinue = true);
+      }
+    }
   }
 
   @override
@@ -75,14 +89,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Single
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => context.go('/register'),
+                      onPressed: _canContinue ? () => context.go('/register') : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: PsoldColors.primary,
+                        backgroundColor: _canContinue ? PsoldColors.primary : Colors.grey,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('Commencer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      child: Text(
+                        _canContinue ? 'Commencer' : 'Chargement...',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                 ],

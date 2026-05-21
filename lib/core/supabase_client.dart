@@ -1,6 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Singleton Supabase client initialization
 class PsoldSupabaseClient {
   PsoldSupabaseClient._();
 
@@ -10,21 +10,38 @@ class PsoldSupabaseClient {
 
   static Supabase get instance => Supabase.instance;
 
-  /// Initialize Supabase with URL and anon key
-  /// These should be provided via --dart-define or environment variables
   Future<void> initialize() async {
-    const supabaseUrl = String.fromEnvironment(
-      'SUPABASE_URL',
-      defaultValue: 'YOUR_SUPABASE_URL_HERE',
-    );
-    const supabaseAnonKey = String.fromEnvironment(
-      'SUPABASE_ANON_KEY',
-      defaultValue: 'YOUR_SUPABASE_ANON_KEY_HERE',
-    );
+    String supabaseUrl = '';
+    String supabaseAnonKey = '';
+
+    try {
+      supabaseUrl = const String.fromEnvironment(
+        'SUPABASE_URL',
+        defaultValue: '',
+      );
+      supabaseAnonKey = const String.fromEnvironment(
+        'SUPABASE_ANON_KEY',
+        defaultValue: '',
+      );
+    } catch (e) {
+      debugPrint('Error reading Supabase environment variables: $e');
+    }
+
+    if (supabaseUrl.isEmpty) {
+      supabaseUrl = 'https://dsflswhxvjnvkedhrynd.supabase.co';
+    }
+    if (supabaseAnonKey.isEmpty) {
+      supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzZmxzd2h4dmpudmtlZGhyeW5kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDU2NjEsImV4cCI6MjA5MzkyMTY2MX0.wlyrkJ2ZDv0-z4S_EMvYFOvS7Eb6Y-cus9Y6CfP7mRA';
+    }
+
+    debugPrint('Initializing Supabase with URL: $supabaseUrl');
 
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
+      debug: kDebugMode,
     );
+
+    debugPrint('Supabase initialized successfully');
   }
 }

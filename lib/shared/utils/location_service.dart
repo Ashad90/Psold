@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:psold/core/router.dart';
 
 class LocationState {
   final double? latitude;
@@ -7,6 +9,7 @@ class LocationState {
   final bool isLoading;
   final String? error;
   final bool permissionDenied;
+  final bool isBackgroundMode;
 
   const LocationState({
     this.latitude,
@@ -14,6 +17,7 @@ class LocationState {
     this.isLoading = false,
     this.error,
     this.permissionDenied = false,
+    this.isBackgroundMode = false,
   });
 
   LocationState copyWith({
@@ -22,6 +26,7 @@ class LocationState {
     bool? isLoading,
     String? error,
     bool? permissionDenied,
+    bool? isBackgroundMode,
   }) {
     return LocationState(
       latitude: latitude ?? this.latitude,
@@ -29,6 +34,7 @@ class LocationState {
       isLoading: isLoading ?? this.isLoading,
       error: error,
       permissionDenied: permissionDenied ?? this.permissionDenied,
+      isBackgroundMode: isBackgroundMode ?? this.isBackgroundMode,
     );
   }
 
@@ -36,7 +42,15 @@ class LocationState {
 }
 
 class LocationNotifier extends StateNotifier<LocationState> {
+  StreamSubscription<Position>? _positionStreamSubscription;
+  Ref? _ref;
+  Timer? _backgroundSyncTimer;
+
   LocationNotifier() : super(const LocationState());
+
+  void setRef(Ref ref) {
+    _ref = ref;
+  }
 
   Future<void> getCurrentLocation() async {
     state = state.copyWith(isLoading: true, error: null);
@@ -90,6 +104,53 @@ class LocationNotifier extends StateNotifier<LocationState> {
     }
   }
 
+  Future<void> startBackgroundTracking() async {
+    if (!state.hasLocation) await getCurrentLocation();
+
+    _positionStreamSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 50,
+      ),
+    ).listen((Position position) {
+      state = state.copyWith(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        isBackgroundMode: true,
+      );
+      _saveLocationToDatabase(position.latitude, position.longitude);
+    });
+
+    _backgroundSyncTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      if (state.hasLocation) {
+        _saveLocationToDatabase(state.latitude!, state.longitude!);
+      }
+    });
+
+    state = state.copyWith(isBackgroundMode: true);
+  }
+
+  Future<void> stopBackgroundTracking() async {
+    await _positionStreamSubscription?.cancel();
+    _positionStreamSubscription = null;
+    _backgroundSyncTimer?.cancel();
+    _backgroundSyncTimer = null;
+    state = state.copyWith(isBackgroundMode: false);
+  }
+
+  Future<void> _saveLocationToDatabase(double lat, double lng) async {
+    if (_ref == null) return;
+    try {
+      final profile = _ref!.read(currentUserProvider);
+      if (profile == null || !profile.isMerchant) return;
+
+      final supabase = _ref!.read(supabaseClientProvider);
+      await supabase.from('profiles').update({
+        'location': 'POINT($lng $lat)',
+      }).eq('id', profile.id);
+    } catch (_) {}
+  }
+
   double? distanceTo(double lat, double lng) {
     if (!state.hasLocation) return null;
     return Geolocator.distanceBetween(
@@ -105,13 +166,27 @@ class LocationNotifier extends StateNotifier<LocationState> {
     if (distanceMeters == null) return null;
     return distanceMeters / 1000;
   }
+
+  @override
+  void dispose() {
+    _positionStreamSubscription?.cancel();
+    _backgroundSyncTimer?.cancel();
+    super.dispose();
+  }
 }
 
 final locationProvider = StateNotifierProvider<LocationNotifier, LocationState>((ref) {
-  return LocationNotifier();
+  final notifier = LocationNotifier();
+  notifier.setRef(ref);
+  return notifier;
 });
 
 final userLocationProvider = Provider<({double? lat, double? lng})>((ref) {
   final locationState = ref.watch(locationProvider);
   return (lat: locationState.latitude, lng: locationState.longitude);
+});
+
+final isBackgroundLocationEnabledProvider = Provider<bool>((ref) {
+  final locationState = ref.watch(locationProvider);
+  return locationState.isBackgroundMode;
 });
