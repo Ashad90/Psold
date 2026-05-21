@@ -11,6 +11,7 @@ import 'package:psold/features/auth/presentation/register_client_screen.dart';
 import 'package:psold/features/auth/presentation/onboarding_screen.dart';
 import 'package:psold/features/auth/presentation/google_profile_setup_screen.dart';
 import 'package:psold/features/feed/presentation/feed_screen.dart';
+import 'package:psold/features/feed/presentation/favorites_screen.dart';
 import 'package:psold/features/upload/presentation/upload_screen.dart';
 import 'package:psold/features/product/presentation/product_detail_screen.dart';
 import 'package:psold/features/merchant/presentation/merchant_dashboard_screen.dart';
@@ -144,14 +145,14 @@ class CurrentUserNotifier extends StateNotifier<UserProfile?> {
 
   bool shouldAutoLogout() {
     if (state?.lastActive == null) return false;
-    final weekAgo = DateTime.now().subtract(const Duration(days: 7));
-    return state!.lastActive!.isBefore(weekAgo);
+    final fiveDaysAgo = DateTime.now().subtract(const Duration(days: 5));
+    return state!.lastActive!.isBefore(fiveDaysAgo);
   }
 
   Future<void> signOut() async {
     final supabase = ref.read(supabaseClientProvider);
-    await supabase.auth.signOut();
     state = null;
+    await supabase.auth.signOut();
   }
 }
 
@@ -164,73 +165,23 @@ class _NavScaffold extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(currentUserProvider);
     final isMerchant = profile?.isMerchant ?? false;
+
     final merchantDestinations = const [
-      NavigationDestination(
-        icon: Icon(Icons.home_outlined),
-        selectedIcon: Icon(Icons.home_rounded),
-        label: 'Accueil',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.add_circle_outline),
-        selectedIcon: Icon(Icons.add_circle_rounded),
-        label: 'Publier',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.inventory_2_outlined),
-        selectedIcon: Icon(Icons.inventory_2_rounded),
-        label: 'Mes produits',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.notifications_outlined),
-        selectedIcon: Icon(Icons.notifications_rounded),
-        label: 'Alertes',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.settings_outlined),
-        selectedIcon: Icon(Icons.settings_rounded),
-        label: 'Paramètres',
-      ),
+      NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Accueil'),
+      NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle_rounded), label: 'Publier'),
+      NavigationDestination(icon: Icon(Icons.inventory_2_outlined), selectedIcon: Icon(Icons.inventory_2_rounded), label: 'Mes produits'),
+      NavigationDestination(icon: Icon(Icons.notifications_outlined), selectedIcon: Icon(Icons.notifications_rounded), label: 'Alertes'),
+      NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'Paramètres'),
     ];
     final clientDestinations = const [
-      NavigationDestination(
-        icon: Icon(Icons.home_outlined),
-        selectedIcon: Icon(Icons.home_rounded),
-        label: 'Accueil',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.favorite_outline),
-        selectedIcon: Icon(Icons.favorite_rounded),
-        label: 'Favoris',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.notifications_outlined),
-        selectedIcon: Icon(Icons.notifications_rounded),
-        label: 'Alertes',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.settings_outlined),
-        selectedIcon: Icon(Icons.settings_rounded),
-        label: 'Paramètres',
-      ),
+      NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Accueil'),
+      NavigationDestination(icon: Icon(Icons.favorite_outline), selectedIcon: Icon(Icons.favorite_rounded), label: 'Favoris'),
+      NavigationDestination(icon: Icon(Icons.notifications_outlined), selectedIcon: Icon(Icons.notifications_rounded), label: 'Alertes'),
+      NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'Paramètres'),
     ];
 
     void onDestinationSelected(int index) {
-      if (isMerchant) {
-        switch (index) {
-          case 0: navigationShell.goBranch(0); break;
-          case 1: navigationShell.goBranch(1); break;
-          case 2: navigationShell.goBranch(2); break;
-          case 3: navigationShell.goBranch(3); break;
-          case 4: navigationShell.goBranch(4); break;
-        }
-      } else {
-        switch (index) {
-          case 0: navigationShell.goBranch(0); break;
-          case 1: navigationShell.goBranch(1); break;
-          case 2: navigationShell.goBranch(2); break;
-          case 3: navigationShell.goBranch(3); break;
-        }
-      }
+      navigationShell.goBranch(index);
     }
 
     return Scaffold(
@@ -249,8 +200,32 @@ class _NavScaffold extends ConsumerWidget {
   }
 }
 
+class _RoleAwareBranch extends ConsumerWidget {
+  final Widget merchantScreen;
+  final Widget clientScreen;
+
+  const _RoleAwareBranch({required this.merchantScreen, required this.clientScreen});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(currentUserProvider);
+    return profile?.isMerchant == true ? merchantScreen : clientScreen;
+  }
+}
+
+class _AuthRefreshNotifier extends ChangeNotifier {
+  _AuthRefreshNotifier() {
+    Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+      notifyListeners();
+    });
+  }
+}
+
+final _authRefreshNotifier = _AuthRefreshNotifier();
+
 final GoRouter router = GoRouter(
   initialLocation: '/login',
+  refreshListenable: _authRefreshNotifier,
   redirect: (context, state) {
     try {
       final container = ProviderScope.containerOf(context);
@@ -271,21 +246,22 @@ final GoRouter router = GoRouter(
       if (isLoading) return null;
 
       if (!isLoggedIn && !isAuthRoute) return '/login';
-      if (isLoggedIn && isAuthRoute) return '/feed';
 
-      if (isLoggedIn && profile == null && isGoogleUser) {
-        return '/google-profile-setup';
-      }
-
-      if (isLoggedIn && profile == null) return '/onboarding';
       if (isLoggedIn && profile != null) {
         final notifier = container.read(currentUserProvider.notifier);
         if (notifier.shouldAutoLogout()) {
           notifier.signOut();
           return '/login';
         }
+        if (isAuthRoute) return '/feed';
         return null;
       }
+
+      if (isLoggedIn && profile == null && isGoogleUser) {
+        return '/google-profile-setup';
+      }
+
+      if (isLoggedIn && profile == null) return '/onboarding';
     } catch (e) {
       debugPrint('Router redirect error: $e');
     }
@@ -334,40 +310,42 @@ final GoRouter router = GoRouter(
               path: '/feed',
               name: 'feed',
               builder: (context, state) => const FeedScreenWrapper(),
-              routes: [
-                GoRoute(
-                  path: 'favorites',
-                  name: 'favorites',
-                  builder: (context, state) => const _FavoritesPlaceholder(),
-                ),
-              ],
             ),
           ],
         ),
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/upload',
-              name: 'upload',
-              builder: (context, state) => const UploadScreen(),
+              path: '/branch1',
+              name: 'branch1',
+              builder: (context, state) => const _RoleAwareBranch(
+                merchantScreen: UploadScreen(),
+                clientScreen: FavoritesScreen(),
+              ),
             ),
           ],
         ),
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/merchant/products',
-              name: 'merchantProducts',
-              builder: (context, state) => const MerchantProductsScreen(),
+              path: '/branch2',
+              name: 'branch2',
+              builder: (context, state) => const _RoleAwareBranch(
+                merchantScreen: MerchantProductsScreen(),
+                clientScreen: NotificationsScreen(),
+              ),
             ),
           ],
         ),
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/notifications',
-              name: 'notifications',
-              builder: (context, state) => const NotificationsScreen(),
+              path: '/branch3',
+              name: 'branch3',
+              builder: (context, state) => const _RoleAwareBranch(
+                merchantScreen: NotificationsScreen(),
+                clientScreen: SettingsScreen(),
+              ),
             ),
           ],
         ),
@@ -417,41 +395,6 @@ class FeedScreenWrapper extends ConsumerWidget {
     final profile = ref.watch(currentUserProvider);
     if (profile == null) return const FeedScreen(isMerchant: false);
     return FeedScreen(isMerchant: profile.isMerchant);
-  }
-}
-
-class _FavoritesPlaceholder extends StatelessWidget {
-  const _FavoritesPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: PsoldColors.backgroundLight,
-      appBar: AppBar(
-        title: const Text('Mes favoris'),
-        backgroundColor: PsoldColors.backgroundLight,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.favorite_border, size: 80, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'Aucun favori',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Les produits que vous likerez apparaîtront ici',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

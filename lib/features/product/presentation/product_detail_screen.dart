@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 import 'package:psold/core/theme.dart';
 import 'package:psold/core/router.dart';
 import 'package:psold/features/feed/domain/feed_provider.dart';
@@ -19,10 +20,42 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   final _commentController = TextEditingController();
   int _currentImageIndex = 0;
   bool _isLiked = false;
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
+  bool _isPlaying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final productAsync = ref.read(productDetailProvider(widget.productId));
+      productAsync.whenData((product) {
+        if (product.videoUrl != null) {
+          _initializeVideo(product.videoUrl!);
+        }
+      });
+    });
+  }
+
+  Future<void> _initializeVideo(String url) async {
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
+    try {
+      await _videoController!.initialize();
+      if (mounted) {
+        setState(() {
+          _isVideoInitialized = true;
+          _isPlaying = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Video init error: $e');
+    }
+  }
 
   @override
   void dispose() {
     _commentController.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
@@ -49,43 +82,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           expandedHeight: 300,
           pinned: true,
           backgroundColor: PsoldColors.backgroundLight,
-          flexibleSpace: FlexibleSpaceBar(
-            background: Stack(
-              children: [
-                PageView.builder(
-                  itemCount: product.images.isEmpty ? 1 : product.images.length,
-                  onPageChanged: (index) => setState(() => _currentImageIndex = index),
-                  itemBuilder: (context, index) {
-                    if (product.images.isEmpty) {
-                      return Container(color: Colors.grey[200], child: const Icon(Icons.image, size: 64));
-                    }
-                    return CachedNetworkImage(imageUrl: product.images[index], fit: BoxFit.cover, placeholder: (_, __) => Container(color: Colors.grey[200], child: const Center(child: CircularProgressIndicator())), errorWidget: (_, __, ___) => Container(color: Colors.grey[200], child: const Icon(Icons.image, size: 64)));
-                  },
-                ),
-                if (product.images.length > 1)
-                  Positioned(
-                    bottom: 16,
-                    left: 0,
-                    right: 0,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(
-                        product.images.length,
-                        (index) => Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _currentImageIndex == index ? Colors.white : Colors.white.withValues(alpha: 0.5),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: _buildMediaGallery(product),
             ),
-          ),
         ),
         SliverToBoxAdapter(
           child: Padding(
@@ -121,6 +120,121 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildMediaGallery(Product product) {
+    final hasVideo = product.videoUrl != null;
+    final mediaCount = product.images.length + (hasVideo ? 1 : 0);
+    final totalItems = mediaCount > 0 ? mediaCount : 1;
+
+    return Stack(
+      children: [
+        PageView.builder(
+          itemCount: totalItems,
+          onPageChanged: (index) => setState(() => _currentImageIndex = index),
+          itemBuilder: (context, index) {
+            if (hasVideo && index == 0) {
+              return _buildVideoPlayer();
+            }
+            final imageIndex = hasVideo ? index - 1 : index;
+            if (product.images.isEmpty || imageIndex >= product.images.length) {
+              return Container(color: Colors.grey[200], child: const Icon(Icons.image, size: 64));
+            }
+            return CachedNetworkImage(
+              imageUrl: product.images[imageIndex],
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(
+                color: Colors.grey[200],
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+              errorWidget: (_, __, ___) => Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.image, size: 64),
+              ),
+            );
+          },
+        ),
+        if (totalItems > 1)
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                totalItems,
+                (index) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _currentImageIndex == index ? Colors.white : Colors.white.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildVideoPlayer() {
+    if (!_isVideoInitialized || _videoController == null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(color: Colors.black),
+          const Center(child: CircularProgressIndicator(color: Colors.white)),
+        ],
+      );
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        AspectRatio(
+          aspectRatio: _videoController!.value.aspectRatio,
+          child: VideoPlayer(_videoController!),
+        ),
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                if (_isPlaying) {
+                  _videoController!.pause();
+                } else {
+                  _videoController!.play();
+                }
+                _isPlaying = !_isPlaying;
+              });
+            },
+            child: AnimatedOpacity(
+              opacity: _isPlaying ? 0.0 : 1.0,
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                color: Colors.black26,
+                child: const Center(
+                  child: Icon(Icons.play_circle_filled, size: 72, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (_isPlaying)
+          Positioned(
+            bottom: 12,
+            left: 12,
+            right: 12,
+            child: VideoProgressIndicator(
+              _videoController!,
+              allowScrubbing: true,
+              colors: const VideoProgressColors(playedColor: PsoldColors.primary),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+            ),
+          ),
       ],
     );
   }

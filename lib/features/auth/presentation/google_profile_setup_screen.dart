@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:psold/core/theme.dart';
+import 'package:psold/core/router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class GoogleProfileSetupScreen extends ConsumerStatefulWidget {
@@ -46,7 +47,7 @@ class _GoogleProfileSetupScreenState extends ConsumerState<GoogleProfileSetupScr
         });
 
         if (mounted) {
-          context.go('/');
+          context.go('/feed');
         }
       }
     } catch (e) {
@@ -64,6 +65,12 @@ class _GoogleProfileSetupScreenState extends ConsumerState<GoogleProfileSetupScr
 
   @override
   Widget build(BuildContext context) {
+    final profile = ref.watch(currentUserProvider);
+    if (profile != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => context.go('/feed'));
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       backgroundColor: PsoldColors.backgroundLight,
       appBar: AppBar(

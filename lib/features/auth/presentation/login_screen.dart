@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:psold/core/theme.dart';
+import 'package:psold/shared/utils/google_auth_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -48,7 +49,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
 
       if (response.user != null && mounted) {
-        context.go('/');
+        context.go('/feed');
       }
     } catch (e) {
       if (mounted) {
@@ -67,11 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final supabase = Supabase.instance.client;
-      await supabase.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: 'io.supabase.psold://callback',
-      );
+      await GoogleAuthService.instance.signIn();
     } catch (e) {
       debugPrint('Google sign in error: $e');
       if (mounted) {

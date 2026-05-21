@@ -291,7 +291,20 @@ class ProductCard extends ConsumerWidget {
                   ),
                 ),
                 if (product.quantity <= 5)
+                if (product.videoUrl != null)
                   Positioned(
+                    bottom: PsoldSpacing.sm,
+                    right: PsoldSpacing.sm,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.play_circle_outline, color: Colors.white, size: 24),
+                    ),
+                  ),
+                Positioned(
                     top: PsoldSpacing.sm,
                     right: PsoldSpacing.sm,
                     child: Container(

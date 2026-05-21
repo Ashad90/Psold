@@ -3,12 +3,30 @@
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_role text;
+  v_display_name text;
+  v_whatsapp text;
+  v_city text;
 BEGIN
-  INSERT INTO public.profiles (id, role, display_name)
+  -- Only auto-create if role is explicitly provided in metadata
+  v_role := NEW.raw_user_meta_data->>'role';
+  v_display_name := NEW.raw_user_meta_data->>'display_name';
+  v_whatsapp := NEW.raw_user_meta_data->>'whatsapp';
+  v_city := NEW.raw_user_meta_data->>'city';
+
+  -- Skip auto-creation if no role provided (Google OAuth users will set it manually)
+  IF v_role IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  INSERT INTO public.profiles (id, role, display_name, whatsapp, city)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'role', 'client'),
-    COALESCE(NEW.raw_user_meta_data->>'display_name', COALESCE(NEW.email, 'User'))
+    v_role,
+    COALESCE(v_display_name, COALESCE(NEW.email, 'User')),
+    v_whatsapp,
+    v_city
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;

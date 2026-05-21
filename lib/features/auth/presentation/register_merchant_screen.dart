@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
-import 'package:psold/core/theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:psold/core/theme.dart';
+import 'package:psold/shared/utils/google_auth_service.dart';
 
 class RegisterMerchantScreen extends ConsumerStatefulWidget {
   const RegisterMerchantScreen({super.key});
@@ -43,6 +43,12 @@ class _RegisterMerchantScreenState extends ConsumerState<RegisterMerchantScreen>
       final response = await supabase.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
+        data: {
+          'role': 'merchant',
+          'display_name': _nameController.text.trim(),
+          'whatsapp': _whatsappController.text.trim(),
+          'city': _cityController.text.trim(),
+        },
       );
 
       if (response.user == null) {
@@ -57,14 +63,6 @@ class _RegisterMerchantScreenState extends ConsumerState<RegisterMerchantScreen>
         setState(() => _isLoading = false);
         return;
       }
-
-      await supabase.from('profiles').insert({
-        'id': response.user!.id,
-        'role': 'merchant',
-        'display_name': _nameController.text.trim(),
-        'whatsapp': _whatsappController.text.trim(),
-        'city': _cityController.text.trim(),
-      });
 
       if (mounted) {
         context.go('/feed');
@@ -268,10 +266,7 @@ class _RegisterMerchantScreenState extends ConsumerState<RegisterMerchantScreen>
                 child: OutlinedButton.icon(
                   onPressed: () async {
                     try {
-                      await Supabase.instance.client.auth.signInWithOAuth(
-                            OAuthProvider.google,
-                            redirectTo: 'io.supabase.psold://callback',
-                          );
+                      await GoogleAuthService.instance.signIn();
                     } catch (e) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(

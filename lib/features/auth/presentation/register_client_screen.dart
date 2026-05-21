@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
-import 'package:psold/core/theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:psold/core/theme.dart';
+import 'package:psold/shared/utils/google_auth_service.dart';
 
 class RegisterClientScreen extends ConsumerStatefulWidget {
   const RegisterClientScreen({super.key});
@@ -38,9 +38,15 @@ class _RegisterClientScreenState extends ConsumerState<RegisterClientScreen> {
     try {
       final supabase = Supabase.instance.client;
 
+      final whatsapp = _whatsappController.text.trim();
       final response = await supabase.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
+        data: {
+          'role': 'client',
+          'display_name': _nameController.text.trim(),
+          if (whatsapp.isNotEmpty) 'whatsapp': whatsapp,
+        },
       );
 
       if (response.user == null) {
@@ -55,14 +61,6 @@ class _RegisterClientScreenState extends ConsumerState<RegisterClientScreen> {
         setState(() => _isLoading = false);
         return;
       }
-
-      final whatsapp = _whatsappController.text.trim();
-      await supabase.from('profiles').insert({
-        'id': response.user!.id,
-        'role': 'client',
-        'display_name': _nameController.text.trim(),
-        if (whatsapp.isNotEmpty) 'whatsapp': whatsapp,
-      });
 
       if (mounted) {
         context.go('/feed');
@@ -245,10 +243,7 @@ class _RegisterClientScreenState extends ConsumerState<RegisterClientScreen> {
                 child: OutlinedButton.icon(
                   onPressed: () async {
                     try {
-                      await Supabase.instance.client.auth.signInWithOAuth(
-                          OAuthProvider.google,
-                          redirectTo: 'io.supabase.psold://callback',
-                        );
+                      await GoogleAuthService.instance.signIn();
                     } catch (e) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
