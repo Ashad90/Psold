@@ -51,6 +51,9 @@ ios/Runner/GoogleService-Info.plist
 # Sentry
 sentry.properties
 
+# Supabase CLI binary — NEVER commit
+supabase.exe
+
 # Obfuscation related
 app.*.map.json
 app.*.symbols
