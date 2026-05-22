@@ -523,6 +523,102 @@ abstract class AppLocalizations {
   /// **'Please add at least one image'**
   String get uploadAddImage;
 
+  /// No description provided for @uploadVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Product video (optional)'**
+  String get uploadVideo;
+
+  /// No description provided for @uploadAddVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a video'**
+  String get uploadAddVideo;
+
+  /// No description provided for @uploadTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'E.g.: Yogurt expiring soon'**
+  String get uploadTitleHint;
+
+  /// No description provided for @uploadDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional description...'**
+  String get uploadDescriptionHint;
+
+  /// No description provided for @uploadSelectDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a date'**
+  String get uploadSelectDate;
+
+  /// No description provided for @uploadCityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'E.g.: Bangui'**
+  String get uploadCityHint;
+
+  /// No description provided for @quantityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'E.g.: 5'**
+  String get quantityHint;
+
+  /// No description provided for @uploadNotConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'User not connected'**
+  String get uploadNotConnected;
+
+  /// No description provided for @uploadImageError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error uploading images'**
+  String get uploadImageError;
+
+  /// No description provided for @uploadAIError.
+  ///
+  /// In en, this message translates to:
+  /// **'AI validation error'**
+  String get uploadAIError;
+
+  /// No description provided for @uploadPickError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error selecting images'**
+  String get uploadPickError;
+
+  /// No description provided for @uploadCameraError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error capturing image'**
+  String get uploadCameraError;
+
+  /// No description provided for @uploadVideoError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error selecting video'**
+  String get uploadVideoError;
+
+  /// No description provided for @uploadNotValidated.
+  ///
+  /// In en, this message translates to:
+  /// **'Product not validated'**
+  String get uploadNotValidated;
+
+  /// No description provided for @uploadOcrPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Date not detected — please enter it manually'**
+  String get uploadOcrPrompt;
+
+  /// No description provided for @profileUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile updated'**
+  String get profileUpdated;
+
   /// No description provided for @validationPending.
   ///
   /// In en, this message translates to:
@@ -750,6 +846,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Get Started'**
   String get begin;
+
+  /// No description provided for @dailyLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily limit reached'**
+  String get dailyLimitReached;
+
+  /// No description provided for @dailyLimitFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'{images}/{imageLimit} images · {videos}/{videoLimit} videos today'**
+  String dailyLimitFormat(int images, int imageLimit, int videos, int videoLimit);
+
+  /// No description provided for @premiumTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Go Premium'**
+  String get premiumTitle;
+
+  /// No description provided for @premiumDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to Premium to post without limits.'**
+  String get premiumDescription;
+
+  /// No description provided for @premiumCTA.
+  ///
+  /// In en, this message translates to:
+  /// **'Go Premium'**
+  String get premiumCTA;
+
+  /// No description provided for @dailyLimitFreeTier.
+  ///
+  /// In en, this message translates to:
+  /// **'5 images · 2 videos per day'**
+  String get dailyLimitFreeTier;
+
+  /// No description provided for @goPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Go Premium'**
+  String get goPremium;
+
+  /// No description provided for @premiumActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Active'**
+  String get premiumActive;
+
+  /// No description provided for @premiumUnlimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited uploads'**
+  String get premiumUnlimited;
+
+  /// No description provided for @premiumLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Limit reached'**
+  String get premiumLimitReached;
+
+  /// No description provided for @contactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support to activate Premium.'**
+  String get contactSupport;
+
+  /// No description provided for @later.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get later;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -81,7 +81,7 @@ class _GoogleProfileSetupScreenState extends ConsumerState<GoogleProfileSetupScr
           icon: const Icon(Icons.arrow_back, color: PsoldColors.textPrimary),
           onPressed: () async {
             await Supabase.instance.client.auth.signOut();
-            if (mounted) context.go('/login');
+                  if (context.mounted) context.go('/login');
           },
         ),
       ),
@@ -212,7 +212,7 @@ class _GoogleProfileSetupScreenState extends ConsumerState<GoogleProfileSetupScr
                 keyboardType: TextInputType.phone,
                 decoration: InputDecoration(
                   hintText: '+23600000000',
-                  prefixIcon: Icon(Icons.chat_bubble_outline, color: PsoldColors.whatsapp),
+                  prefixIcon: const Icon(Icons.chat_bubble_outline, color: PsoldColors.whatsapp),
                   helperText: _selectedRole == 'merchant' ? 'Obligatoire pour contact avec les clients' : 'Pour être contacté par les marchands',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   filled: true,
@@ -263,7 +263,7 @@ class _GoogleProfileSetupScreenState extends ConsumerState<GoogleProfileSetupScr
               TextButton(
                 onPressed: () async {
                   await Supabase.instance.client.auth.signOut();
-                  if (mounted) context.go('/login');
+            if (context.mounted) context.go('/login');
                 },
                 child: const Text('Se déconnecter et utiliser un autre compte'),
               ),

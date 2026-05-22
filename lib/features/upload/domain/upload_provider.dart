@@ -1,7 +1,9 @@
 import 'dart:io';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+
+part 'upload_provider.g.dart';
 
 enum UploadStatus {
   initial, picking, picked, validating, validated, rejected, uploading, uploaded, error
@@ -10,6 +12,8 @@ enum UploadStatus {
 class UploadState {
   final UploadStatus status;
   final List<File> images;
+  final File? videoFile;
+  final String? videoUrl;
   final String? title;
   final String? description;
   final String category;
@@ -22,10 +26,13 @@ class UploadState {
   final String? errorMessage;
   final DateTime? extractedExpiry;
   final double ocrConfidence;
+  final bool ocrFailed;
 
   const UploadState({
     this.status = UploadStatus.initial,
     this.images = const [],
+    this.videoFile,
+    this.videoUrl,
     this.title,
     this.description,
     this.category = 'alimentaire',
@@ -38,11 +45,14 @@ class UploadState {
     this.errorMessage,
     this.extractedExpiry,
     this.ocrConfidence = 0,
+    this.ocrFailed = false,
   });
 
   UploadState copyWith({
     UploadStatus? status,
     List<File>? images,
+    File? videoFile,
+    String? videoUrl,
     String? title,
     String? description,
     String? category,
@@ -55,10 +65,15 @@ class UploadState {
     String? errorMessage,
     DateTime? extractedExpiry,
     double? ocrConfidence,
+    bool? ocrFailed,
+    bool clearVideo = false,
+    bool clearVideoUrl = false,
   }) {
     return UploadState(
       status: status ?? this.status,
       images: images ?? this.images,
+      videoFile: clearVideo ? null : (videoFile ?? this.videoFile),
+      videoUrl: clearVideoUrl ? null : (videoUrl ?? this.videoUrl),
       title: title ?? this.title,
       description: description ?? this.description,
       category: category ?? this.category,
@@ -71,11 +86,13 @@ class UploadState {
       errorMessage: errorMessage ?? this.errorMessage,
       extractedExpiry: extractedExpiry ?? this.extractedExpiry,
       ocrConfidence: ocrConfidence ?? this.ocrConfidence,
+      ocrFailed: ocrFailed ?? this.ocrFailed,
     );
   }
 }
 
-class UploadNotifier extends StateNotifier<UploadState> {
+@riverpod
+class Upload extends _$Upload {
   final ImagePicker _picker = ImagePicker();
   final TextRecognizer _textRecognizer = TextRecognizer();
   final List<RegExp> _datePatterns = [
@@ -84,12 +101,14 @@ class UploadNotifier extends StateNotifier<UploadState> {
     RegExp(r'(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})'),
   ];
 
-  UploadNotifier() : super(const UploadState());
-
   @override
-  void dispose() {
+  UploadState build() {
+    ref.onDispose(_cleanup);
+    return const UploadState();
+  }
+
+  void _cleanup() {
     _textRecognizer.close();
-    super.dispose();
   }
 
   Future<void> pickImages() async {
@@ -140,7 +159,10 @@ class UploadNotifier extends StateNotifier<UploadState> {
           }
         }
       }
-    } catch (_) {}
+      state = state.copyWith(ocrFailed: true, ocrConfidence: confidence);
+    } catch (_) {
+      state = state.copyWith(ocrFailed: true);
+    }
   }
 
   DateTime? _parseDateMatch(RegExpMatch match) {
@@ -171,6 +193,24 @@ class UploadNotifier extends StateNotifier<UploadState> {
     }
   }
 
+  Future<void> pickVideo() async {
+    try {
+      final XFile? pickedFile = await _picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(seconds: 30),
+      );
+      if (pickedFile != null) {
+        state = state.copyWith(videoFile: File(pickedFile.path));
+      }
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Erreur lors de la sélection vidéo');
+    }
+  }
+
+  void removeVideo() {
+    state = state.copyWith(clearVideo: true, clearVideoUrl: true);
+  }
+
   void removeImage(int index) {
     final images = [...state.images];
     images.removeAt(index);
@@ -192,7 +232,3 @@ class UploadNotifier extends StateNotifier<UploadState> {
   void setUploaded() => state = state.copyWith(status: UploadStatus.uploaded);
   void reset() => state = const UploadState();
 }
-
-final uploadProvider = StateNotifierProvider<UploadNotifier, UploadState>((ref) {
-  return UploadNotifier();
-});

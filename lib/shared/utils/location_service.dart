@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:psold/core/router.dart';
+
+part 'location_service.g.dart';
 
 class LocationState {
   final double? latitude;
@@ -41,15 +44,15 @@ class LocationState {
   bool get hasLocation => latitude != null && longitude != null;
 }
 
-class LocationNotifier extends StateNotifier<LocationState> {
+@riverpod
+class Location extends _$Location {
   StreamSubscription<Position>? _positionStreamSubscription;
-  Ref? _ref;
   Timer? _backgroundSyncTimer;
 
-  LocationNotifier() : super(const LocationState());
-
-  void setRef(Ref ref) {
-    _ref = ref;
+  @override
+  LocationState build() {
+    ref.onDispose(_cleanup);
+    return const LocationState();
   }
 
   Future<void> getCurrentLocation() async {
@@ -139,12 +142,11 @@ class LocationNotifier extends StateNotifier<LocationState> {
   }
 
   Future<void> _saveLocationToDatabase(double lat, double lng) async {
-    if (_ref == null) return;
     try {
-      final profile = _ref!.read(currentUserProvider);
+      final profile = ref.read(currentUserProvider);
       if (profile == null || !profile.isMerchant) return;
 
-      final supabase = _ref!.read(supabaseClientProvider);
+      final supabase = ref.read(supabaseClientProvider);
       await supabase.from('profiles').update({
         'location': 'POINT($lng $lat)',
       }).eq('id', profile.id);
@@ -167,26 +169,20 @@ class LocationNotifier extends StateNotifier<LocationState> {
     return distanceMeters / 1000;
   }
 
-  @override
-  void dispose() {
+  void _cleanup() {
     _positionStreamSubscription?.cancel();
     _backgroundSyncTimer?.cancel();
-    super.dispose();
   }
 }
 
-final locationProvider = StateNotifierProvider<LocationNotifier, LocationState>((ref) {
-  final notifier = LocationNotifier();
-  notifier.setRef(ref);
-  return notifier;
-});
-
-final userLocationProvider = Provider<({double? lat, double? lng})>((ref) {
+@riverpod
+({double? lat, double? lng}) userLocation(Ref ref) {
   final locationState = ref.watch(locationProvider);
   return (lat: locationState.latitude, lng: locationState.longitude);
-});
+}
 
-final isBackgroundLocationEnabledProvider = Provider<bool>((ref) {
+@riverpod
+bool isBackgroundLocationEnabled(Ref ref) {
   final locationState = ref.watch(locationProvider);
   return locationState.isBackgroundMode;
-});
+}

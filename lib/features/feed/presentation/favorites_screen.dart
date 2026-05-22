@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:psold/core/theme.dart';
 import 'package:psold/core/router.dart';
 import 'package:psold/features/feed/domain/feed_provider.dart';
 
-final favoritesProvider = FutureProvider<List<Product>>((ref) async {
+part 'favorites_screen.g.dart';
+
+@riverpod
+Future<List<Product>> favorites(Ref ref) async {
   final supabase = ref.watch(supabaseClientProvider);
   final userId = supabase.auth.currentUser?.id;
   if (userId == null) return [];
@@ -25,7 +29,7 @@ final favoritesProvider = FutureProvider<List<Product>>((ref) async {
       })
       .whereType<Product>()
       .toList();
-});
+}
 
 class FavoritesScreen extends ConsumerWidget {
   const FavoritesScreen({super.key});
@@ -136,6 +140,8 @@ class _FavoriteCard extends ConsumerWidget {
                           imageUrl: product.images.first,
                           height: 180,
                           width: double.infinity,
+                          memCacheWidth: 360,
+                          memCacheHeight: 180,
                           fit: BoxFit.cover,
                           placeholder: (_, __) => Container(
                             height: 180,
@@ -179,7 +185,7 @@ class _FavoriteCard extends ConsumerWidget {
                     },
                     child: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Colors.black38,
                         shape: BoxShape.circle,
                       ),

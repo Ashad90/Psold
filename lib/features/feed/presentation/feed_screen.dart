@@ -5,6 +5,7 @@ import 'package:psold/core/theme.dart';
 import 'package:psold/features/feed/domain/feed_provider.dart';
 import 'package:psold/shared/utils/location_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:psold/flutter_gen/gen_l10n/app_localizations.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
   final bool isMerchant;
@@ -103,7 +104,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     }
 
     if (feedState.products.isEmpty) {
-      return const Center(child: Text('Aucun produit disponible'));
+      return Center(child: Text(AppLocalizations.of(context)!.feedEmpty));
     }
 
     return RefreshIndicator(
@@ -115,15 +116,15 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         itemBuilder: (context, index) {
           if (index >= feedState.products.length) {
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: PsoldSpacing.lg),
-              child: Center(
-                child: feedState.isLoadingMore
-                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const SizedBox.shrink(),
-              ),
-            );
-          }
-          return ProductCard(product: feedState.products[index]);
+                              padding: const EdgeInsets.symmetric(vertical: PsoldSpacing.lg),
+                              child: Center(
+                                child: feedState.isLoadingMore
+                                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                                    : const SizedBox.shrink(),
+                              ),
+                            );
+                          }
+                          return RepaintBoundary(child: ProductCard(product: feedState.products[index]));
         },
       ),
     );
@@ -139,7 +140,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         children: categories.map((cat) {
           final isSelected = (cat == 'Tous' && filter.category == null) || filter.category == cat;
           return Padding(
-            padding: const EdgeInsets.only(right: PsoldSpacing.sm),
+            padding: const EdgeInsetsDirectional.only(end: PsoldSpacing.sm),
             child: FilterChip(
               label: Text(cat == 'Tous' ? 'Tous' : _getCategoryLabel(cat)),
               selected: isSelected,
@@ -186,7 +187,7 @@ class _FilterSheet extends ConsumerWidget {
         children: [
           Text('Filtres', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: PsoldSpacing.lg),
-          Text('Trier par', style: Theme.of(context).textTheme.titleSmall),
+          Text(AppLocalizations.of(context)!.filterSortBy, style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: PsoldSpacing.sm),
           Wrap(
             spacing: PsoldSpacing.sm,
@@ -217,7 +218,12 @@ class _FilterSheet extends ConsumerWidget {
             max: 50,
             divisions: 49,
             label: '${filter.radiusKm?.toInt() ?? 10} km',
-            onChanged: (value) => ref.read(feedFilterProvider.notifier).state = filter.copyWith(radiusKm: value),
+            onChanged: (value) {
+              ref.read(feedFilterProvider.notifier).state = filter.copyWith(radiusKm: value);
+            },
+            onChangeEnd: (value) {
+              ref.read(feedProductsProvider.notifier).refresh();
+            },
           ),
           const SizedBox(height: PsoldSpacing.lg),
           SizedBox(
@@ -269,6 +275,8 @@ class ProductCard extends ConsumerWidget {
                           imageUrl: product.images.first,
                           height: 180,
                           width: double.infinity,
+                          memCacheWidth: 360,
+                          memCacheHeight: 180,
                           fit: BoxFit.cover,
                           placeholder: (_, __) => Container(height: 180, color: Colors.grey[200], child: const Center(child: CircularProgressIndicator())),
                           errorWidget: (_, __, ___) => Container(height: 180, color: Colors.grey[200], child: const Icon(Icons.image, size: 48)),
@@ -297,7 +305,7 @@ class ProductCard extends ConsumerWidget {
                     right: PsoldSpacing.sm,
                     child: Container(
                       padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Colors.black54,
                         shape: BoxShape.circle,
                       ),

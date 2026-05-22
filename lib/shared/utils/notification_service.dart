@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:psold/core/router.dart';
+
+part 'notification_service.g.dart';
 
 const _settingsBox = 'settings';
 const _notificationsAskedKey = 'notifications_asked';
@@ -115,17 +118,12 @@ class NotificationService {
   }
 
   void _showLocalNotification(RemoteMessage message, String? soundType) {
-    // For custom ringtones, use flutter_local_notifications with audio files
-    // Place custom sounds in: assets/sounds/
-    // Files: new_product.mp3, like.mp3, comment.mp3, notification.mp3
   }
 
   void _navigateToProduct(String productId) {
-    // Navigation will be handled by the app's router
   }
 
   void _navigateToFeed() {
-    // Navigation handled by app
   }
 
   Future<void> _subscribeToTopics() async {
@@ -176,11 +174,13 @@ class NotificationService {
   }
 }
 
-final notificationServiceProvider = Provider<NotificationService>((ref) {
+@riverpod
+NotificationService notificationService(Ref ref) {
   return NotificationService(ref);
-});
+}
 
-final fcmTokenProvider = FutureProvider<String?>((ref) async {
+@riverpod
+Future<String?> fcmToken(Ref ref) async {
   final service = ref.watch(notificationServiceProvider);
   return await service.getToken();
-});
+}

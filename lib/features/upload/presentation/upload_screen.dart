@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:psold/core/theme.dart';
+import 'package:psold/core/router.dart';
 import 'package:psold/features/upload/domain/upload_provider.dart';
+import 'package:psold/flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:psold/features/upload/data/upload_repository.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,11 +22,11 @@ class UploadScreen extends ConsumerWidget {
         notifier.reset();
         context.go('/feed');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Produit publié avec succès !'), backgroundColor: Colors.green),
+          SnackBar(content: Text(AppLocalizations.of(context)!.uploadSuccess), backgroundColor: Colors.green),
         );
       } else if (next.status == UploadStatus.rejected) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Produit refusé : ${next.rejectionReason}'), backgroundColor: Colors.red),
+          SnackBar(content: Text(AppLocalizations.of(context)!.uploadFailed(next.rejectionReason ?? '')), backgroundColor: Colors.red),
         );
       } else if (next.status == UploadStatus.error && next.errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -38,7 +40,7 @@ class UploadScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: PsoldColors.backgroundLight,
       appBar: AppBar(
-        title: const Text('Publier un produit'),
+        title: Text(AppLocalizations.of(context)!.uploadTitle),
         backgroundColor: PsoldColors.backgroundLight,
         elevation: 0,
       ),
@@ -60,24 +62,71 @@ class UploadScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildImagePicker(BuildContext context, UploadState state, UploadNotifier notifier) {
+  Widget _buildImagePicker(BuildContext context, UploadState state, Upload notifier) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Photos du produit', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+        Text(AppLocalizations.of(context)!.uploadPhotos, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: PsoldSpacing.sm),
         Row(
           children: [
-            Expanded(child: _ImagePickerButton(icon: Icons.camera_alt_rounded, label: 'Caméra', onTap: notifier.pickSingleImage, isLoading: state.status == UploadStatus.picking)),
+            Expanded(child: _ImagePickerButton(icon: Icons.camera_alt_rounded, label: AppLocalizations.of(context)!.uploadCamera, onTap: notifier.pickSingleImage, isLoading: state.status == UploadStatus.picking)),
             const SizedBox(width: PsoldSpacing.sm),
-            Expanded(child: _ImagePickerButton(icon: Icons.photo_library_rounded, label: 'Galerie', onTap: notifier.pickImages, isLoading: state.status == UploadStatus.picking)),
+            Expanded(child: _ImagePickerButton(icon: Icons.photo_library_rounded, label: AppLocalizations.of(context)!.uploadGallery, onTap: notifier.pickImages, isLoading: state.status == UploadStatus.picking)),
           ],
         ),
+        const SizedBox(height: PsoldSpacing.md),
+        Text(AppLocalizations.of(context)!.uploadVideo, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+        const SizedBox(height: PsoldSpacing.sm),
+        if (state.videoFile != null)
+          _buildVideoPreview(context, state, notifier)
+        else
+          _VideoPickerButton(onTap: notifier.pickVideo),
       ],
     );
   }
 
-  Widget _buildImageGallery(UploadState state, UploadNotifier notifier) {
+  Widget _buildVideoPreview(BuildContext context, UploadState state, Upload notifier) {
+    return Container(
+      padding: const EdgeInsets.all(PsoldSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(PsoldSpacing.sm),
+            decoration: BoxDecoration(
+              color: PsoldColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.videocam_rounded, color: PsoldColors.primary, size: 28),
+          ),
+          const SizedBox(width: PsoldSpacing.md),
+          Expanded(
+            child: Text(
+              state.videoFile!.path.split('/').last,
+              style: Theme.of(context).textTheme.bodySmall,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          GestureDetector(
+            onTap: notifier.removeVideo,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+              child: const Icon(Icons.close, color: Colors.white, size: 18),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageGallery(UploadState state, Upload notifier) {
     return SizedBox(
       height: 100,
       child: ListView.builder(
@@ -90,7 +139,7 @@ class UploadScreen extends ConsumerWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.file(File(state.images[index].path), width: 100, height: 100, fit: BoxFit.cover),
+                  child: Image.file(File(state.images[index].path), width: 100, height: 100, cacheWidth: 100, cacheHeight: 100, fit: BoxFit.cover),
                 ),
                 Positioned(
                   top: 4,
@@ -108,15 +157,15 @@ class UploadScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildProductForm(BuildContext context, UploadState state, UploadNotifier notifier, WidgetRef ref, bool isLoading) {
+  Widget _buildProductForm(BuildContext context, UploadState state, Upload notifier, WidgetRef ref, bool isLoading) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _FormField(label: 'Titre du produit *', hint: 'Ex: Yaourt nature expire bientôt', onChanged: notifier.updateTitle, initialValue: state.title),
+        _FormField(label: AppLocalizations.of(context)!.uploadProductTitle, hint: AppLocalizations.of(context)!.uploadTitleHint, onChanged: notifier.updateTitle, initialValue: state.title),
         const SizedBox(height: PsoldSpacing.md),
-        _FormField(label: 'Description (optionnel)', hint: 'Description supplémentaire...', onChanged: notifier.updateDescription, initialValue: state.description, maxLines: 3),
+        _FormField(label: AppLocalizations.of(context)!.uploadDescription, hint: AppLocalizations.of(context)!.uploadDescriptionHint, onChanged: notifier.updateDescription, initialValue: state.description, maxLines: 3),
         const SizedBox(height: PsoldSpacing.md),
-        Text('Catégorie *', style: Theme.of(context).textTheme.titleSmall),
+        Text(AppLocalizations.of(context)!.uploadCategory, style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: PsoldSpacing.sm),
         Wrap(
           spacing: PsoldSpacing.sm,
@@ -130,15 +179,15 @@ class UploadScreen extends ConsumerWidget {
         const SizedBox(height: PsoldSpacing.md),
         Row(
           children: [
-            Expanded(child: _FormField(label: 'Prix original (FCFA)', hint: 'Ex: 2000', onChanged: (v) => notifier.updatePriceOriginal(double.tryParse(v)), keyboardType: TextInputType.number)),
+            Expanded(child: _FormField(label: AppLocalizations.of(context)!.uploadOriginalPrice, hint: 'Ex: 2000', onChanged: (v) => notifier.updatePriceOriginal(double.tryParse(v)), keyboardType: TextInputType.number)),
             const SizedBox(width: PsoldSpacing.md),
-            Expanded(child: _FormField(label: 'Prix promo * (FCFA)', hint: 'Ex: 1000', onChanged: (v) => notifier.updatePricePromo(double.tryParse(v)), keyboardType: TextInputType.number)),
+            Expanded(child: _FormField(label: AppLocalizations.of(context)!.uploadPromoPrice, hint: 'Ex: 1000', onChanged: (v) => notifier.updatePricePromo(double.tryParse(v)), keyboardType: TextInputType.number)),
           ],
         ),
         const SizedBox(height: PsoldSpacing.md),
         _FormField(
-          label: 'Date de péremption *',
-          hint: 'Sélectionner une date',
+          label: AppLocalizations.of(context)!.uploadExpiryDate,
+          hint: AppLocalizations.of(context)!.uploadSelectDate,
           readOnly: true,
           trailing: Icons.calendar_today,
           onTap: () async {
@@ -147,10 +196,24 @@ class UploadScreen extends ConsumerWidget {
           },
           controller: state.expiryDate != null ? TextEditingController(text: '${state.expiryDate!.day}/${state.expiryDate!.month}/${state.expiryDate!.year}') : null,
         ),
+        if (state.ocrFailed && state.expiryDate == null)
+          Padding(
+            padding: const EdgeInsets.only(top: PsoldSpacing.xs),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 14, color: Colors.orange),
+                const SizedBox(width: PsoldSpacing.xs),
+                Text(
+                  AppLocalizations.of(context)!.uploadOcrPrompt,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange),
+                ),
+              ],
+            ),
+          ),
         const SizedBox(height: PsoldSpacing.md),
-        _FormField(label: 'Quantité *', hint: 'Ex: 5', onChanged: (v) => notifier.updateQuantity(int.tryParse(v) ?? 1), keyboardType: TextInputType.number, initialValue: state.quantity.toString()),
+        _FormField(label: AppLocalizations.of(context)!.uploadQuantity, hint: AppLocalizations.of(context)!.quantityHint, onChanged: (v) => notifier.updateQuantity(int.tryParse(v) ?? 1), keyboardType: TextInputType.number, initialValue: state.quantity.toString()),
         const SizedBox(height: PsoldSpacing.md),
-        _FormField(label: 'Ville (optionnel)', hint: 'Ex: Bangui', onChanged: notifier.updateCity, initialValue: state.city),
+        _FormField(label: AppLocalizations.of(context)!.uploadCity, hint: AppLocalizations.of(context)!.uploadCityHint, onChanged: notifier.updateCity, initialValue: state.city),
         const SizedBox(height: PsoldSpacing.xl),
         SizedBox(
           width: double.infinity,
@@ -164,7 +227,7 @@ class UploadScreen extends ConsumerWidget {
             ),
             child: isLoading
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
-                : const Text('Valider et publier', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                : Text(AppLocalizations.of(context)!.uploadValidate, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           ),
         ),
         const SizedBox(height: PsoldSpacing.xl),
@@ -172,14 +235,34 @@ class UploadScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _handleSubmit(BuildContext context, WidgetRef ref, UploadState state, UploadNotifier notifier) async {
+  Future<void> _handleSubmit(BuildContext context, WidgetRef ref, UploadState state, Upload notifier) async {
+    final l10n = AppLocalizations.of(context)!;
     if (state.title == null || state.pricePromo == null || state.expiryDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez remplir tous les champs obligatoires'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.uploadRequired), backgroundColor: Colors.red));
       return;
     }
 
     if (state.images.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez ajouter au moins une image'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.uploadAddImage), backgroundColor: Colors.red));
+      return;
+    }
+
+    final profile = ref.read(currentUserProvider);
+    if (profile == null) return;
+
+    await ref.read(currentUserProvider.notifier).ensureUploadReset();
+
+    final freshProfile = ref.read(currentUserProvider);
+    if (freshProfile == null) return;
+
+    if (!context.mounted) return;
+    if (!freshProfile.canUploadImage) {
+      context.push('/premium');
+      return;
+    }
+
+    if (state.videoFile != null && !freshProfile.canUploadVideo) {
+      context.push('/premium');
       return;
     }
 
@@ -188,7 +271,7 @@ class UploadScreen extends ConsumerWidget {
     final supabase = Supabase.instance.client;
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) {
-      notifier.setError('Utilisateur non connecté');
+      notifier.setError(l10n.uploadNotConnected);
       return;
     }
 
@@ -201,8 +284,13 @@ class UploadScreen extends ConsumerWidget {
     }
 
     if (imageUrls.isEmpty) {
-      notifier.setError('Erreur lors de l\'upload des images');
+      notifier.setError(l10n.uploadImageError);
       return;
+    }
+
+    String? videoUrl;
+    if (state.videoFile != null) {
+      videoUrl = await repository.uploadVideo(state.videoFile!, userId);
     }
 
     final validationResult = await repository.validateWithAI(
@@ -213,7 +301,7 @@ class UploadScreen extends ConsumerWidget {
     );
 
     if (validationResult == null) {
-      notifier.setError('Erreur de validation IA');
+      notifier.setError(l10n.uploadAIError);
       return;
     }
 
@@ -231,14 +319,20 @@ class UploadScreen extends ConsumerWidget {
       quantity: state.quantity,
       images: imageUrls,
       city: state.city,
+      videoUrl: videoUrl,
       validated: isValid,
       aiScore: aiScore,
     );
 
     if (isValid) {
       notifier.setUploaded();
+      final profileNotifier = ref.read(currentUserProvider.notifier);
+      profileNotifier.incrementDailyImageCount();
+      if (videoUrl != null) {
+        profileNotifier.incrementDailyVideoCount();
+      }
     } else {
-      notifier.setRejected(validationResult['rejection_reason'] as String? ?? 'Produit non validé');
+      notifier.setRejected(validationResult['rejection_reason'] as String? ?? l10n.uploadNotValidated);
     }
   }
 }
@@ -323,6 +417,44 @@ class _FormField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _VideoPickerButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _VideoPickerButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(PsoldSpacing.md),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.black.withValues(alpha: 0.03),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(PsoldSpacing.sm),
+              decoration: BoxDecoration(
+                color: PsoldColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.videocam_rounded, color: PsoldColors.primary, size: 24),
+            ),
+            const SizedBox(width: PsoldSpacing.md),
+            Text(
+              AppLocalizations.of(context)!.uploadAddVideo,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

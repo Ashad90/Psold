@@ -53,6 +53,8 @@ class MerchantDashboardScreen extends ConsumerWidget {
                 ),
               )
             else ...[
+              _UploadLimitCard(profile: profile),
+              const SizedBox(height: PsoldSpacing.md),
               Row(
                 children: [
                   Expanded(
@@ -145,6 +147,97 @@ class MerchantDashboardScreen extends ConsumerWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _UploadLimitCard extends ConsumerWidget {
+  final UserProfile? profile;
+
+  const _UploadLimitCard({required this.profile});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (profile == null) return const SizedBox.shrink();
+    final isPremium = profile!.isPremium;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(PsoldSpacing.md),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: isPremium
+            ? const LinearGradient(colors: [Color(0xFFFF6B2B), Color(0xFFFFA726)])
+            : null,
+        color: isPremium ? null : Colors.white,
+        boxShadow: isPremium
+            ? null
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(PsoldSpacing.sm),
+            decoration: BoxDecoration(
+              color: isPremium ? Colors.white.withValues(alpha: 0.2) : PsoldColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              isPremium ? Icons.workspace_premium_rounded : Icons.cloud_upload_rounded,
+              color: isPremium ? Colors.white : PsoldColors.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: PsoldSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isPremium ? 'Premium' : 'Limite quotidienne',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isPremium ? Colors.white : null,
+                  ),
+                ),
+                Text(
+                  isPremium
+                      ? 'Illimité'
+                      : '${profile!.remainingImages} images · ${profile!.remainingVideos} vidéos',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: isPremium ? Colors.white.withValues(alpha: 0.8) : PsoldColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isPremium)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: PsoldSpacing.sm, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('ACTIF', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+            )
+          else
+            GestureDetector(
+              onTap: () => context.push('/premium'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: PsoldSpacing.md, vertical: PsoldSpacing.sm),
+                decoration: BoxDecoration(
+                  color: PsoldColors.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Premium',
+                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:psold/core/supabase_client.dart';
@@ -13,6 +14,7 @@ import 'package:psold/features/auth/presentation/google_profile_setup_screen.dar
 import 'package:psold/features/feed/presentation/feed_screen.dart';
 import 'package:psold/features/feed/presentation/favorites_screen.dart';
 import 'package:psold/features/upload/presentation/upload_screen.dart';
+import 'package:psold/features/premium/presentation/premium_upsell_screen.dart';
 import 'package:psold/features/product/presentation/product_detail_screen.dart';
 import 'package:psold/features/merchant/presentation/merchant_dashboard_screen.dart';
 import 'package:psold/features/merchant/presentation/merchant_products_screen.dart';
@@ -22,94 +24,34 @@ import 'package:psold/features/settings/presentation/profile_screen.dart';
 import 'package:psold/features/search/presentation/search_screen.dart';
 import 'package:psold/shared/utils/location_service.dart';
 
-final supabaseClientProvider = Provider<SupabaseClient>((ref) => PsoldSupabaseClient.instance.client);
+part 'router.g.dart';
 
-final authStateProvider = StreamProvider<AuthState>((ref) {
+@riverpod
+SupabaseClient supabaseClient(Ref ref) => PsoldSupabaseClient.instance.client;
+
+@riverpod
+Stream<AuthState> authState(Ref ref) {
   final supabase = ref.watch(supabaseClientProvider);
   return supabase.auth.onAuthStateChange;
-});
-
-final currentUserProvider = StateNotifierProvider<CurrentUserNotifier, UserProfile?>((ref) {
-  return CurrentUserNotifier(ref);
-});
-
-final merchantBackgroundLocationProvider = Provider<void>((ref) {
-  ref.listen<UserProfile?>(currentUserProvider, (previous, next) {
-    final locationNotifier = ref.read(locationProvider.notifier);
-    if (next != null && next.isMerchant) {
-      locationNotifier.startBackgroundTracking();
-    } else {
-      locationNotifier.stopBackgroundTracking();
-    }
-  });
-});
-
-class UserProfile {
-  final String id;
-  final String role;
-  final String? displayName;
-  final String? whatsapp;
-  final String? avatarUrl;
-  final String? city;
-  final DateTime? lastActive;
-
-  const UserProfile({
-    required this.id,
-    required this.role,
-    this.displayName,
-    this.whatsapp,
-    this.avatarUrl,
-    this.city,
-    this.lastActive,
-  });
-
-  bool get isMerchant => role == 'merchant';
-  bool get isClient => role == 'client';
-
-  factory UserProfile.fromMap(Map<String, dynamic> map) {
-    return UserProfile(
-      id: map['id'] as String,
-      role: map['role'] as String,
-      displayName: map['display_name'] as String?,
-      whatsapp: map['whatsapp'] as String?,
-      avatarUrl: map['avatar_url'] as String?,
-      city: map['city'] as String?,
-      lastActive: map['last_active'] != null ? DateTime.parse(map['last_active'] as String) : null,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'role': role,
-      'display_name': displayName,
-      'whatsapp': whatsapp,
-      'avatar_url': avatarUrl,
-      'city': city,
-      'last_active': lastActive?.toIso8601String(),
-    };
-  }
 }
 
-class CurrentUserNotifier extends StateNotifier<UserProfile?> {
-  final Ref ref;
-
-  CurrentUserNotifier(this.ref) : super(null) {
-    _init();
-  }
-
-  void _init() {
+@riverpod
+class CurrentUser extends _$CurrentUser {
+  @override
+  UserProfile? build() {
     ref.listen(authStateProvider, (previous, next) {
       next.whenData((authState) async {
         final session = authState.session;
         if (session != null) {
           await _loadProfile(session.user.id);
+          await _checkUploadReset();
           await _updateLastActive();
         } else {
           state = null;
         }
       });
     }, fireImmediately: true);
+    return null;
   }
 
   Future<void> _loadProfile(String userId) async {
@@ -140,6 +82,99 @@ class CurrentUserNotifier extends StateNotifier<UserProfile?> {
       avatarUrl: state!.avatarUrl,
       city: state!.city,
       lastActive: DateTime.now(),
+      isPremium: state!.isPremium,
+      dailyImageCount: state!.dailyImageCount,
+      dailyVideoCount: state!.dailyVideoCount,
+      premiumSince: state!.premiumSince,
+      dailyResetAt: state!.dailyResetAt,
+    );
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Future<void> _checkUploadReset() async {
+    if (state == null || state!.isPremium) return;
+    final now = DateTime.now();
+    final resetAt = state!.dailyResetAt;
+    if (resetAt == null || !_isSameDay(resetAt, now)) {
+      final today = DateTime(now.year, now.month, now.day);
+      final supabase = ref.read(supabaseClientProvider);
+      await supabase
+          .from('profiles')
+          .update({
+            'daily_image_count': 0,
+            'daily_video_count': 0,
+            'daily_reset_at': today.toIso8601String()
+          })
+          .eq('id', state!.id);
+      state = UserProfile(
+        id: state!.id,
+        role: state!.role,
+        displayName: state!.displayName,
+        whatsapp: state!.whatsapp,
+        avatarUrl: state!.avatarUrl,
+        city: state!.city,
+        lastActive: state!.lastActive,
+        isPremium: state!.isPremium,
+        dailyImageCount: 0,
+        dailyVideoCount: 0,
+        premiumSince: state!.premiumSince,
+        dailyResetAt: today,
+      );
+    }
+  }
+
+  Future<void> ensureUploadReset() => _checkUploadReset();
+
+  Future<void> incrementDailyImageCount() async {
+    if (state == null || state!.isPremium) return;
+    await _checkUploadReset();
+    final supabase = ref.read(supabaseClientProvider);
+    final newCount = state!.dailyImageCount + 1;
+    await supabase
+        .from('profiles')
+        .update({'daily_image_count': newCount})
+        .eq('id', state!.id);
+    state = UserProfile(
+      id: state!.id,
+      role: state!.role,
+      displayName: state!.displayName,
+      whatsapp: state!.whatsapp,
+      avatarUrl: state!.avatarUrl,
+      city: state!.city,
+      lastActive: state!.lastActive,
+      isPremium: state!.isPremium,
+      dailyImageCount: newCount,
+      dailyVideoCount: state!.dailyVideoCount,
+      premiumSince: state!.premiumSince,
+      dailyResetAt: state!.dailyResetAt,
+    );
+  }
+
+  Future<void> incrementDailyVideoCount() async {
+    if (state == null || state!.isPremium) return;
+    await _checkUploadReset();
+    final supabase = ref.read(supabaseClientProvider);
+    final newCount = state!.dailyVideoCount + 1;
+    await supabase
+        .from('profiles')
+        .update({'daily_video_count': newCount})
+        .eq('id', state!.id);
+    state = UserProfile(
+      id: state!.id,
+      role: state!.role,
+      displayName: state!.displayName,
+      whatsapp: state!.whatsapp,
+      avatarUrl: state!.avatarUrl,
+      city: state!.city,
+      lastActive: state!.lastActive,
+      isPremium: state!.isPremium,
+      dailyImageCount: state!.dailyImageCount,
+      dailyVideoCount: newCount,
+      premiumSince: state!.premiumSince,
+      dailyResetAt: state!.dailyResetAt,
     );
   }
 
@@ -156,6 +191,92 @@ class CurrentUserNotifier extends StateNotifier<UserProfile?> {
   }
 }
 
+@riverpod
+void merchantBackgroundLocation(Ref ref) {
+  ref.listen<UserProfile?>(currentUserProvider, (previous, next) {
+    final locationNotifier = ref.read(locationProvider.notifier);
+    if (next != null && next.isMerchant) {
+      locationNotifier.startBackgroundTracking();
+    } else {
+      locationNotifier.stopBackgroundTracking();
+    }
+  });
+}
+
+class UserProfile {
+  final String id;
+  final String role;
+  final String? displayName;
+  final String? whatsapp;
+  final String? avatarUrl;
+  final String? city;
+  final DateTime? lastActive;
+  final bool isPremium;
+  final int dailyImageCount;
+  final int dailyVideoCount;
+  final DateTime? premiumSince;
+  final DateTime? dailyResetAt;
+
+  const UserProfile({
+    required this.id,
+    required this.role,
+    this.displayName,
+    this.whatsapp,
+    this.avatarUrl,
+    this.city,
+    this.lastActive,
+    this.isPremium = false,
+    this.dailyImageCount = 0,
+    this.dailyVideoCount = 0,
+    this.premiumSince,
+    this.dailyResetAt,
+  });
+
+  bool get isMerchant => role == 'merchant';
+  bool get isClient => role == 'client';
+
+  static const int freeImageLimit = 5;
+  static const int freeVideoLimit = 2;
+  bool get canUploadImage => isPremium || dailyImageCount < freeImageLimit;
+  bool get canUploadVideo => isPremium || dailyVideoCount < freeVideoLimit;
+  int get remainingImages => isPremium ? 999 : freeImageLimit - dailyImageCount;
+  int get remainingVideos => isPremium ? 999 : freeVideoLimit - dailyVideoCount;
+
+  factory UserProfile.fromMap(Map<String, dynamic> map) {
+    return UserProfile(
+      id: map['id'] as String,
+      role: map['role'] as String,
+      displayName: map['display_name'] as String?,
+      whatsapp: map['whatsapp'] as String?,
+      avatarUrl: map['avatar_url'] as String?,
+      city: map['city'] as String?,
+      lastActive: map['last_active'] != null ? DateTime.parse(map['last_active'] as String) : null,
+      isPremium: map['is_premium'] as bool? ?? false,
+      dailyImageCount: map['daily_image_count'] as int? ?? 0,
+      dailyVideoCount: map['daily_video_count'] as int? ?? 0,
+      premiumSince: map['premium_since'] != null ? DateTime.parse(map['premium_since'] as String) : null,
+      dailyResetAt: map['daily_reset_at'] != null ? DateTime.parse(map['daily_reset_at'] as String) : null,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'role': role,
+      'display_name': displayName,
+      'whatsapp': whatsapp,
+      'avatar_url': avatarUrl,
+      'city': city,
+      'last_active': lastActive?.toIso8601String(),
+      'is_premium': isPremium,
+      'daily_image_count': dailyImageCount,
+      'daily_video_count': dailyVideoCount,
+      'premium_since': premiumSince?.toIso8601String(),
+      'daily_reset_at': dailyResetAt?.toIso8601String(),
+    };
+  }
+}
+
 class _NavScaffold extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
@@ -166,14 +287,14 @@ class _NavScaffold extends ConsumerWidget {
     final profile = ref.watch(currentUserProvider);
     final isMerchant = profile?.isMerchant ?? false;
 
-    final merchantDestinations = const [
+    const merchantDestinations = [
       NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Accueil'),
       NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle_rounded), label: 'Publier'),
       NavigationDestination(icon: Icon(Icons.inventory_2_outlined), selectedIcon: Icon(Icons.inventory_2_rounded), label: 'Mes produits'),
       NavigationDestination(icon: Icon(Icons.notifications_outlined), selectedIcon: Icon(Icons.notifications_rounded), label: 'Alertes'),
       NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'Paramètres'),
     ];
-    final clientDestinations = const [
+    const clientDestinations = [
       NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Accueil'),
       NavigationDestination(icon: Icon(Icons.favorite_outline), selectedIcon: Icon(Icons.favorite_rounded), label: 'Favoris'),
       NavigationDestination(icon: Icon(Icons.notifications_outlined), selectedIcon: Icon(Icons.notifications_rounded), label: 'Alertes'),
@@ -382,6 +503,11 @@ final GoRouter router = GoRouter(
       path: '/search',
       name: 'search',
       builder: (context, state) => const SearchScreen(),
+    ),
+    GoRoute(
+      path: '/premium',
+      name: 'premium',
+      builder: (context, state) => const PremiumUpsellScreen(),
     ),
   ],
   errorBuilder: (context, state) => const ErrorScreen(),

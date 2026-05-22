@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import 'package:psold/core/theme.dart';
 import 'package:psold/core/router.dart';
 import 'package:psold/features/feed/domain/feed_provider.dart';
+import 'package:psold/flutter_gen/gen_l10n/app_localizations.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final String productId;
@@ -98,20 +99,23 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 const SizedBox(height: PsoldSpacing.md),
                 _buildLikeSection(context, product),
                 const Divider(height: 32),
-                if (profile?.isClient == true) ...[
+                if (profile?.isClient == true && profile?.whatsapp != null) ...[
                   _buildMerchantContact(context, product),
                   const Divider(height: 32),
                 ],
                 Text(
-                  'Commentaires',
+                  AppLocalizations.of(context)!.comments,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: PsoldSpacing.md),
                 _buildCommentInput(context),
                 const SizedBox(height: PsoldSpacing.md),
                 commentsAsync.when(
-                  data: (comments) => Column(
-                    children: comments.map((c) => _buildCommentItem(context, c)).toList(),
+                  data: (comments) => ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: comments.length,
+                    itemBuilder: (context, index) => _buildCommentItem(context, comments[index]),
                   ),
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Text('Erreur: $e'),
@@ -144,6 +148,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             }
             return CachedNetworkImage(
               imageUrl: product.images[imageIndex],
+              memCacheWidth: MediaQuery.of(context).size.width.toInt(),
+              memCacheHeight: 300,
               fit: BoxFit.cover,
               placeholder: (_, __) => Container(
                 color: Colors.grey[200],
@@ -339,12 +345,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           }
         },
         icon: const Icon(Icons.chat_rounded),
-        label: const Text('Discuter', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        label: Text(AppLocalizations.of(context)!.discuss, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         style: ElevatedButton.styleFrom(
           backgroundColor: PsoldColors.whatsapp,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          minimumSize: const Size(double.infinity, 56),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 0,
         ),
       ),
     );

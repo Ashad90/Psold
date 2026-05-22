@@ -5,51 +5,73 @@
 | Task | Command |
 |------|---------|
 | Lint/typecheck | `flutter analyze` |
-| Run tests | `flutter test` |
-| Run specific test | `flutter test test/widget_test.dart` |
+| Run all tests | `flutter test` |
+| Run single test | `flutter test test/<file>` |
 | Update golden files | `flutter test --update-goldens` |
-| Generate localization | `flutter gen-l10n` |
-| Code generation (riverpod/freezed/json) | `flutter pub run build_runner build` |
+| Gen localization | `flutter gen-l10n` |
+| Codegen (riverpod/freezed/json) | `flutter pub run build_runner build` |
 | Watch & regenerate | `flutter pub run build_runner watch` |
 | Clean rebuild | `flutter clean && flutter pub get` |
-| Build debug APK | `flutter build apk --debug` |
-| Generate splash (one-time) | `dart run flutter_native_splash:create` |
-| Generate launcher icons (one-time) | `dart run flutter_launcher_icons` |
+| Build release APK | `flutter build apk --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=... --dart-define=GOOGLE_CLIENT_ID=...` |
+| Splash (one-time) | `dart run flutter_native_splash:create` |
+| Icons (one-time) | `dart run flutter_launcher_icons` |
 
-**Order**: `build_runner` → `flutter analyze` → `flutter test`. Always run `build_runner` after adding `@riverpod`/`freezed`/`json_serializable` annotations.
+**Order**: `build_runner` → `flutter analyze` → `flutter test`. Run `build_runner` after adding `@riverpod`/`freezed`/`json_serializable` annotations.
 
 **SDK**: Dart `^3.11.5`
 
+## Entrypoint & Init
+
+`lib/main.dart`: `ProviderScope` + GoRouter + Firebase init + Sentry (opt-in via `--dart-define=SENTRY_DSN=<dsn>`) + Hive box `'settings'` opened before `runApp`. `debugShowCheckedModeBanner: false`.
+
+Package imports use `package:psold/...`.
+
 ## Architecture
 
-- Entry point: `lib/main.dart` — `ProviderScope` + GoRouter + Firebase init + Hive box `'settings'` opened before `runApp`
-- State: Riverpod 2.x with `@riverpod` annotations (run `build_runner` after adding)
-- Navigation: GoRouter with auth/role guards in `lib/core/router.dart`
-- Auth flow: Google users → `/google-profile-setup` → `/onboarding` → `/feed`; email users → `/onboarding` → `/feed`
-- Auto-logout after 7 days inactive (`shouldAutoLogout()` in `currentUserProvider` notifier)
-- Theme: `PsoldColors` and `PsoldSpacing` from `lib/core/theme.dart` — never hardcode colors/spacing
-- RTL: Use `EdgeInsetsDirectional`, `TextAlign.start`, `Directionality.of(context)` — don't assume LTR
-- Supabase client: singleton at `lib/core/supabase_client.dart` — init via `--dart-define` env vars; falls back to hardcoded dev values in the class
-- Fonts: Space Grotesk via `google_fonts` (loaded at runtime, no bundled fonts)
+- **Auth**: Supabase Auth (email + Google Sign-In). Google flow → `/google-profile-setup` → `/onboarding` → `/feed`. Email flow → `/onboarding` → `/feed`.
+- **State**: Riverpod 2.x with `@riverpod` annotations. Providers in `lib/core/router.dart`: `supabaseClientProvider`, `authStateProvider`, `currentUserProvider` (StateNotifier with `UserProfile`), `merchantBackgroundLocationProvider`.
+- **Navigation**: GoRouter with auth/role guards in `lib/core/router.dart`. Role-aware shell via `_NavScaffold` + `_RoleAwareBranch`. 5 `StatefulShellBranch` entries — branch indices map to nav bar items.
+- **Theme**: `PsoldColors` and `PsoldSpacing` from `lib/core/theme.dart` — never hardcode colors/spacing. Material3 enabled.
+- **RTL**: Use `EdgeInsetsDirectional`, `TextAlign.start`, `Directionality.of(context)`. Supported locales: fr (default), en, ar.
+- **Supabase client**: Singleton at `lib/core/supabase_client.dart` — init via `--dart-define` env vars; falls back to hardcoded dev values (safe — anon key with RLS).
+- **Fonts**: Space Grotesk via `google_fonts` (runtime, no bundled fonts).
+- **Sentry**: optional, `--dart-define=SENTRY_DSN=<dsn>` (defaults disabled).
 
-## Key Sources
+## Navigation Bar (role-based, in `_NavScaffold`)
 
-- **SPEC.md**: Full product specs, DB schema, design tokens, RLS policies, business rules — read before any task
-- **START_HERE.md**: 25-phase task workflow, skill activation, execution sequence
-- **lib/core/**: `router.dart` (routes+guards), `theme.dart` (colors/spacing), `supabase_client.dart`, `locale_provider.dart`, `constants.dart`
-- **lib/l10n/**: ARB source files (`app_fr.arb`, `app_en.arb`, `app_ar.arb`) — `generate: true` in pubspec.yaml outputs to `lib/flutter_gen/gen_l10n/`
+| Tab | Merchant | Client |
+|-----|----------|--------|
+| 0 | Accueil | Accueil |
+| 1 | Publier | Favoris |
+| 2 | Mes produits | Alertes |
+| 3 | Alertes | Paramètres |
+| 4 | Paramètres | — |
 
-## Directory Layout
+## Design Rules
 
-```
-lib/
-├── main.dart                  # Entry point
-├── core/                      # supabase_client, router, theme, locale_provider, constants
-├── features/                  # auth, feed, upload, product, merchant, search, notifications, settings, splash
-├── shared/                    # widgets, models, utils, providers
-├── l10n/                      # ARB source + generated dart files (do not edit generated)
-└── flutter_gen/gen_l10n/      # Auto-generated localization code (do not edit)
-```
+- All spacing: multiples of 8px (`PsoldSpacing.xs=4` to `PsoldSpacing.xxxl=64`)
+- Cards: `BorderRadius.circular(20)` primary, `12` secondary
+- Primary button: `#FF6B2B` orange (`PsoldColors.primary`)
+- WhatsApp button (`#25D366`): only when `profile.role == 'client'`; number in E.164
+- Skeleton loaders for loading states — never `CircularProgressIndicator` alone
+- RTL-safe layout: `EdgeInsetsDirectional`, `TextAlign.start`
+
+## Premium & Upload Limits
+
+- **Free tier**: 5 images / 2 videos per day per merchant. `daily_image_count`, `daily_video_count`, `daily_reset_at` on `profiles` (reset each calendar day).
+- **Premium** (`is_premium` flag): unlimited uploads. Upsell at `/premium` route.
+- Limits enforced in `UserProfile` model methods (`canUploadImage`, `canUploadVideo`, `remainingImages`, `remainingVideos`).
+- DB fields added in migrations `005_add_premium_fields.sql` and `006_add_daily_upload_fields.sql`.
+
+## Database (Supabase/PostgreSQL)
+
+Tables: `profiles` (extends `auth.users`), `products`, `likes`, `comments`, `notifications`. RLS on all.
+
+`profiles` notable fields: `role` (merchant/client), `display_name`, `whatsapp`, `avatar_url`, `city`, `fcm_token`, `last_active`, `is_premium`, `daily_image_count`, `daily_video_count`, `daily_reset_at`, `premium_since`.
+
+`products` notable: validation status (`validated`, `ai_score`, `rejection_reason`), expiry dates.
+
+Auto-logout after 5 days inactivity (`shouldAutoLogout()` in `router.dart:182`).
 
 ## Supabase CLI
 
@@ -60,44 +82,33 @@ CLI at `supabase.exe` in project root. Requires access token from https://app.su
 | Login | `supabase.exe login --token <token>` |
 | Link project | `supabase.exe link --project-ref dsflswhxvjnvkedhrynd` |
 | Push migrations | `supabase.exe db push --yes` |
-| Run SQL query | `supabase.exe db query --linked --file path/to/file.sql` |
+| Run SQL | `supabase.exe db query --linked --file path/to/file.sql` |
 
-**Never modify existing migrations** — remote already has the schema. Add only new numbered migrations (`005_...`).
+**Migrations**: 6 existing (001-006). Never modify existing — add new as `007_<description>.sql`.
 
-## Design Rules
+Edge Function at `supabase/functions/validate-product/index.ts` — runs on Deno, validates product expiry vs category limits.
 
-- All spacing: multiples of 8px (`PsoldSpacing.xs=4` to `PsoldSpacing.xxxl=64`)
-- Cards: `BorderRadius.circular(20)` primary, `12` secondary
-- Primary button: `#FF6B2B` orange (`PsoldColors.primary`)
-- WhatsApp button (`#25D366`): only visible when `profile.role == 'client'`
-- WhatsApp number format: E.164 (`+[country][number]`)
-- Skeleton loaders for loading states — never `CircularProgressIndicator` alone
-- Use `Material3` (enabled in theme)
+## Key Source Files
 
-## Navigation Bar
-
-- **Client**: Accueil | Favoris | Alertes | Paramètres
-- **Merchant**: Accueil | Publier | Mes produits | Alertes | Paramètres
-- Role-based nav rendered in `_NavScaffold` (`lib/core/router.dart:158`)
-
-## Database (Supabase/PostgreSQL)
-
-- `profiles`: Extends `auth.users` with `role` (merchant/client), `display_name`, `whatsapp`, `avatar_url`, `city`, `fcm_token`, `last_active`
-- `products`: Merchant-uploaded items with validation status, AI score, expiry dates
-- `likes`: User-product likes with unique(user_id, product_id)
-- `comments`: User comments on products
-- `notifications`: User notifications with type, is_read
-- RLS enforced on all tables — profiles publicly readable, products restricted by validation+ownership, likes/comments by auth
+| File | What |
+|------|------|
+| `SPEC.md` | Original specs, DB schema, design tokens, RLS, business rules |
+| `PROGRESS.md` | Implementation checklist with file locations |
+| `lib/core/router.dart` | Routes, guards, providers, `UserProfile` model |
+| `lib/core/theme.dart` | Colors, spacing, text theme, light/dark themes |
+| `lib/core/supabase_client.dart` | Supabase singleton init |
+| `lib/core/constants.dart` | App thresholds (max images, OCR confidence, cache duration) |
+| `lib/core/locale_provider.dart` | Hive-persisted locale (riverpod) |
+| `lib/shared/providers/auth_provider.dart` | AuthNotifier (email + Google sign in/up) |
+| `lib/shared/utils/google_auth_service.dart` | Google Sign-In service |
 
 ## Quirks
 
-- `_role_card.dart` in `shared/widgets/` is a private file exporting `RoleCard` class — do not move or rename
-- `_psold_scaffold.dart` in `shared/widgets/` defines `PsoldScaffold`/`PsoldShell` but these are **not imported anywhere** (unused — router uses `_NavScaffold` instead)
-- `lib/l10n/` contains both ARB sources AND generated dart files; the actual auto-generated output used at runtime is in `lib/flutter_gen/gen_l10n/`
-- Assets: `assets/images/` and `assets/animations/` (defined in pubspec.yaml)
-- Notification service via `notificationServiceProvider` (Riverpod `Provider`) in `shared/utils/notification_service.dart`
-- Dark theme: `psoldDarkTheme` in `lib/core/theme.dart`
-- App language: French market (FR / EN / AR support)
-- Sentry DSN: optional, set via `SENTRY_DSN` env var (defaults to empty/disabled)
-- Splash screen uses Lottie at `assets/animations/psold_logo_animation.json`
-- One-time visual setup: `dart run flutter_native_splash:create` and `dart run flutter_launcher_icons` after changing config yamls
+- `lib/l10n/` contains both ARB sources AND generated Dart files — actual runtime output is `lib/flutter_gen/gen_l10n/`. Edit only ARB files, then `flutter gen-l10n`.
+- `lib/shared/widgets/_role_card.dart` is a private file exporting `RoleCard` class — do not move/rename.
+- `lib/shared/widgets/_psold_scaffold.dart` defines `PsoldScaffold`/**`PsoldShell`** — **unused** (router uses `_NavScaffold` instead). Do not rely on it.
+- All env vars via `--dart-define`. No `.env` loading at runtime, no `flutter_dotenv`.
+- Splash: color-only (no image) in `flutter_native_splash.yaml`. Regenerate with `dart run flutter_native_splash:create`.
+- CI via Codemagic (`codemagic.yaml`): android-debug, android-release, ios-release, pr-checks workflows.
+- 4 test files in `test/`: `widget_test.dart`, `login_screen_test.dart`, `product_model_test.dart`, `product_card_test.dart`.
+- `google_auth_service.dart` has `_webClientId` hardcoded — needed for Google Sign-In on Android.

@@ -226,6 +226,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uploadAddImage => 'Please add at least one image';
 
   @override
+  String get uploadVideo => 'Product video (optional)';
+
+  @override
+  String get uploadAddVideo => 'Add a video';
+
+  @override
+  String get uploadTitleHint => 'E.g.: Yogurt expiring soon';
+
+  @override
+  String get uploadDescriptionHint => 'Additional description...';
+
+  @override
+  String get uploadSelectDate => 'Select a date';
+
+  @override
+  String get uploadCityHint => 'E.g.: Bangui';
+
+  @override
+  String get quantityHint => 'E.g.: 5';
+
+  @override
+  String get uploadNotConnected => 'User not connected';
+
+  @override
+  String get uploadImageError => 'Error uploading images';
+
+  @override
+  String get uploadAIError => 'AI validation error';
+
+  @override
+  String get uploadPickError => 'Error selecting images';
+
+  @override
+  String get uploadCameraError => 'Error capturing image';
+
+  @override
+  String get uploadVideoError => 'Error selecting video';
+
+  @override
+  String get uploadNotValidated => 'Product not validated';
+
+  @override
+  String get uploadOcrPrompt => 'Date not detected — please enter it manually';
+
+  @override
+  String get profileUpdated => 'Profile updated';
+
+  @override
   String get validationPending => 'Validating...';
 
   @override
@@ -346,4 +394,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get begin => 'Get Started';
+
+  @override
+  String get dailyLimitReached => 'Daily limit reached';
+
+  @override
+  String dailyLimitFormat(int images, int imageLimit, int videos, int videoLimit) {
+    return '$images/$imageLimit images · $videos/$videoLimit videos today';
+  }
+
+  @override
+  String get premiumTitle => 'Go Premium';
+
+  @override
+  String get premiumDescription => 'Upgrade to Premium to post without limits.';
+
+  @override
+  String get premiumCTA => 'Go Premium';
+
+  @override
+  String get dailyLimitFreeTier => '5 images · 2 videos per day';
+
+  @override
+  String get goPremium => 'Go Premium';
+
+  @override
+  String get premiumActive => 'Premium Active';
+
+  @override
+  String get premiumUnlimited => 'Unlimited uploads';
+
+  @override
+  String get premiumLimitReached => 'Limit reached';
+
+  @override
+  String get contactSupport => 'Contact support to activate Premium.';
+
+  @override
+  String get later => 'Later';
 }

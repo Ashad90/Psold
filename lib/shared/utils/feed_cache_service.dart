@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:psold/features/feed/domain/feed_provider.dart';
+
+part 'feed_cache_service.g.dart';
 
 const String _feedBoxName = 'feed_cache';
 const String _feedKey = 'products';
@@ -102,6 +105,5 @@ class FeedCacheService {
   }
 }
 
-final feedCacheServiceProvider = Provider<FeedCacheService>((ref) {
-  return FeedCacheService();
-});
+@riverpod
+FeedCacheService feedCacheService(Ref ref) => FeedCacheService();

@@ -1,9 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:psold/core/theme.dart';
 import 'package:psold/core/locale_provider.dart';
 import 'package:psold/core/router.dart';
+
+part 'settings_screen.g.dart';
+
+@riverpod
+class ThemeModeSetting extends _$ThemeModeSetting {
+  @override
+  ThemeMode build() => ThemeMode.system;
+
+  void setThemeMode(ThemeMode mode) {
+    state = mode;
+  }
+}
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -11,7 +24,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(currentUserProvider);
-    final themeMode = ref.watch(themeModeProvider);
+    final themeMode = ref.watch(themeModeSettingProvider);
 
     return Scaffold(
       backgroundColor: PsoldColors.backgroundLight,
@@ -34,7 +47,7 @@ class SettingsScreen extends ConsumerWidget {
               _SettingsTile(
                 icon: Icons.language,
                 title: 'Langue',
-                subtitle: _getLanguageName(ref.watch(localeProvider).languageCode),
+                subtitle: _getLanguageName(ref.watch(localeNotifierProvider).languageCode),
                 onTap: () => _showLanguageSheet(context, ref),
               ),
               const Divider(height: 1),
@@ -46,7 +59,16 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: PsoldSpacing.md),
+          if (profile?.isMerchant == true) ...[
+            _buildSection(
+              context,
+              title: 'Premium',
+              children: [
+                _PremiumCard(profile: profile!),
+              ],
+            ),
+            const SizedBox(height: PsoldSpacing.md),
+          ],
           _buildSection(
             context,
             title: 'Compte',
@@ -197,16 +219,16 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             Text('Choisir la langue', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: PsoldSpacing.md),
-            _LanguageOption(label: 'Français', code: 'fr', current: ref.read(localeProvider).languageCode, onTap: (code) {
-              ref.read(localeProvider.notifier).setLocale(code);
+            _LanguageOption(label: 'Français', code: 'fr', current: ref.read(localeNotifierProvider).languageCode, onTap: (code) {
+              ref.read(localeNotifierProvider.notifier).setLocale(code);
               Navigator.pop(context);
             }),
-            _LanguageOption(label: 'English', code: 'en', current: ref.read(localeProvider).languageCode, onTap: (code) {
-              ref.read(localeProvider.notifier).setLocale(code);
+            _LanguageOption(label: 'English', code: 'en', current: ref.read(localeNotifierProvider).languageCode, onTap: (code) {
+              ref.read(localeNotifierProvider.notifier).setLocale(code);
               Navigator.pop(context);
             }),
-            _LanguageOption(label: 'العربية', code: 'ar', current: ref.read(localeProvider).languageCode, onTap: (code) {
-              ref.read(localeProvider.notifier).setLocale(code);
+            _LanguageOption(label: 'العربية', code: 'ar', current: ref.read(localeNotifierProvider).languageCode, onTap: (code) {
+              ref.read(localeNotifierProvider.notifier).setLocale(code);
               Navigator.pop(context);
             }),
           ],
@@ -226,16 +248,16 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             Text('Choisir le thème', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: PsoldSpacing.md),
-            _ThemeOption(label: 'Clair', icon: Icons.light_mode, mode: ThemeMode.light, current: ref.read(themeModeProvider), onTap: (mode) {
-              ref.read(themeModeProvider.notifier).setThemeMode(mode);
+            _ThemeOption(label: 'Clair', icon: Icons.light_mode, mode: ThemeMode.light, current: ref.read(themeModeSettingProvider), onTap: (mode) {
+              ref.read(themeModeSettingProvider.notifier).setThemeMode(mode);
               Navigator.pop(context);
             }),
-            _ThemeOption(label: 'Sombre', icon: Icons.dark_mode, mode: ThemeMode.dark, current: ref.read(themeModeProvider), onTap: (mode) {
-              ref.read(themeModeProvider.notifier).setThemeMode(mode);
+            _ThemeOption(label: 'Sombre', icon: Icons.dark_mode, mode: ThemeMode.dark, current: ref.read(themeModeSettingProvider), onTap: (mode) {
+              ref.read(themeModeSettingProvider.notifier).setThemeMode(mode);
               Navigator.pop(context);
             }),
-            _ThemeOption(label: 'Système', icon: Icons.settings_brightness, mode: ThemeMode.system, current: ref.read(themeModeProvider), onTap: (mode) {
-              ref.read(themeModeProvider.notifier).setThemeMode(mode);
+            _ThemeOption(label: 'Système', icon: Icons.settings_brightness, mode: ThemeMode.system, current: ref.read(themeModeSettingProvider), onTap: (mode) {
+              ref.read(themeModeSettingProvider.notifier).setThemeMode(mode);
               Navigator.pop(context);
             }),
           ],
@@ -272,15 +294,79 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
-  return ThemeModeNotifier(ThemeMode.system);
-});
+class _PremiumCard extends ConsumerWidget {
+  final UserProfile profile;
 
-class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier(super.initialTheme);
+  const _PremiumCard({required this.profile});
 
-  void setThemeMode(ThemeMode mode) {
-    state = mode;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isPremium = profile.isPremium;
+    return Container(
+      padding: const EdgeInsets.all(PsoldSpacing.md),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: isPremium
+            ? const LinearGradient(colors: [Color(0xFFFF6B2B), Color(0xFFFFA726)])
+            : null,
+        color: isPremium ? null : Colors.white,
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(PsoldSpacing.sm),
+            decoration: BoxDecoration(
+              color: isPremium ? Colors.white.withValues(alpha: 0.2) : PsoldColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              isPremium ? Icons.workspace_premium_rounded : Icons.star_border_rounded,
+              color: isPremium ? Colors.white : PsoldColors.primary,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: PsoldSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isPremium ? 'Premium Actif' : 'Passer au Premium',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isPremium ? Colors.white : null,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isPremium
+                      ? 'Téléchargements illimités'
+                      : '${profile.remainingImages} images · ${profile.remainingVideos} vidéos / jour',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isPremium ? Colors.white.withValues(alpha: 0.8) : Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isPremium)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: PsoldSpacing.sm, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('ACTIF', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.arrow_forward_ios, size: 16, color: PsoldColors.primary),
+              onPressed: () => context.push('/premium'),
+            ),
+        ],
+      ),
+    );
   }
 }
 

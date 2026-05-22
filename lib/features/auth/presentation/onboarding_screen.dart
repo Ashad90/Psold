@@ -44,7 +44,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Single
 
   @override
   Widget build(BuildContext context) {
-    final locale = ref.watch(localeProvider);
+    final locale = ref.watch(localeNotifierProvider);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
@@ -123,11 +123,11 @@ class _LanguageSelector extends ConsumerWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _LanguageChip(code: 'fr', label: 'FR', isSelected: locale.languageCode == 'fr', onTap: () => ref.read(localeProvider.notifier).setLocale('fr')),
+        _LanguageChip(code: 'fr', label: 'FR', isSelected: locale.languageCode == 'fr', onTap: () => ref.read(localeNotifierProvider.notifier).setLocale('fr')),
         const SizedBox(width: PsoldSpacing.sm),
-        _LanguageChip(code: 'en', label: 'EN', isSelected: locale.languageCode == 'en', onTap: () => ref.read(localeProvider.notifier).setLocale('en')),
+        _LanguageChip(code: 'en', label: 'EN', isSelected: locale.languageCode == 'en', onTap: () => ref.read(localeNotifierProvider.notifier).setLocale('en')),
         const SizedBox(width: PsoldSpacing.sm),
-        _LanguageChip(code: 'ar', label: 'ع', isSelected: locale.languageCode == 'ar', onTap: () => ref.read(localeProvider.notifier).setLocale('ar')),
+        _LanguageChip(code: 'ar', label: 'ع', isSelected: locale.languageCode == 'ar', onTap: () => ref.read(localeNotifierProvider.notifier).setLocale('ar')),
       ],
     );
   }

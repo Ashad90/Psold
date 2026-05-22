@@ -226,6 +226,54 @@ class AppLocalizationsAr extends AppLocalizations {
   String get uploadAddImage => 'يرجى إضافة صورة واحدة على الأقل';
 
   @override
+  String get uploadVideo => 'فيديو المنتج (اختياري)';
+
+  @override
+  String get uploadAddVideo => 'إضافة فيديو';
+
+  @override
+  String get uploadTitleHint => 'مثال: زبادي قريب من انتهاء الصلاحية';
+
+  @override
+  String get uploadDescriptionHint => 'وصف إضافي...';
+
+  @override
+  String get uploadSelectDate => 'اختر تاريخًا';
+
+  @override
+  String get uploadCityHint => 'مثال: بانغي';
+
+  @override
+  String get quantityHint => 'مثال: 5';
+
+  @override
+  String get uploadNotConnected => 'المستخدم غير متصل';
+
+  @override
+  String get uploadImageError => 'خطأ في رفع الصور';
+
+  @override
+  String get uploadAIError => 'خطأ في التحقق بالذكاء الاصطناعي';
+
+  @override
+  String get uploadPickError => 'خطأ في اختيار الصور';
+
+  @override
+  String get uploadCameraError => 'خطأ في التقاط الصورة';
+
+  @override
+  String get uploadVideoError => 'خطأ في اختيار الفيديو';
+
+  @override
+  String get uploadNotValidated => 'المنتج لم يتم التحقق منه';
+
+  @override
+  String get uploadOcrPrompt => 'لم يتم اكتشاف التاريخ — يرجى إدخاله يدويًا';
+
+  @override
+  String get profileUpdated => 'تم تحديث الملف الشخصي';
+
+  @override
   String get validationPending => 'جارٍ التحقق...';
 
   @override
@@ -346,4 +394,42 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get begin => 'ابدأ';
+
+  @override
+  String get dailyLimitReached => 'تم الوصول إلى الحد اليومي';
+
+  @override
+  String dailyLimitFormat(int images, int imageLimit, int videos, int videoLimit) {
+    return '$images/$imageLimit صور · $videos/$videoLimit فيديو اليوم';
+  }
+
+  @override
+  String get premiumTitle => 'الترقية إلى بريميوم';
+
+  @override
+  String get premiumDescription => 'ارتقِ إلى بريميوم للنشر بلا حدود.';
+
+  @override
+  String get premiumCTA => 'الترقية إلى بريميوم';
+
+  @override
+  String get dailyLimitFreeTier => '5 صور · 2 فيديو في اليوم';
+
+  @override
+  String get goPremium => 'الترقية إلى بريميوم';
+
+  @override
+  String get premiumActive => 'بريميوم نشط';
+
+  @override
+  String get premiumUnlimited => 'تحميلات غير محدودة';
+
+  @override
+  String get premiumLimitReached => 'تم الوصول إلى الحد الأقصى';
+
+  @override
+  String get contactSupport => 'اتصل بالدعم لتفعيل بريميوم.';
+
+  @override
+  String get later => 'لاحقًا';
 }

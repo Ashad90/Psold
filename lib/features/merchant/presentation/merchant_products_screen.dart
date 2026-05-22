@@ -77,7 +77,7 @@ class _MerchantProductsScreenState extends ConsumerState<MerchantProductsScreen>
         children: MerchantProductStatus.values.map((status) {
           final isSelected = status == currentStatus;
           return Padding(
-            padding: const EdgeInsets.only(right: PsoldSpacing.sm),
+            padding: const EdgeInsetsDirectional.only(end: PsoldSpacing.sm),
             child: FilterChip(
               label: Text(_getStatusLabel(status)),
               selected: isSelected,
@@ -210,6 +210,8 @@ class _MerchantProductCard extends ConsumerWidget {
                         imageUrl: product.images.first,
                         height: 160,
                         width: double.infinity,
+                        memCacheWidth: 320,
+                        memCacheHeight: 160,
                         fit: BoxFit.cover,
                         placeholder: (_, __) => Container(height: 160, color: Colors.grey[200], child: const Center(child: CircularProgressIndicator())),
                         errorWidget: (_, __, ___) => Container(height: 160, color: Colors.grey[200], child: const Icon(Icons.image, size: 48)),

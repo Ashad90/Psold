@@ -1,4 +1,4 @@
-# PROGRESS.md — Psold
+﻿# PROGRESS.md — Psold
 
 > Ce fichier documente l'état d'avancement du projet à chaque étape de développement.
 
@@ -8,12 +8,11 @@
 
 | Dimension | Status | Notes |
 |---|---|---|
-| `flutter analyze` | ✅ 0 erreur | 11 info warnings (pré-existants) |
-| `flutter test` | ✅ Tous passent | 1 test placeholder |
+| `flutter analyze` | ✅ 0 erreur | 0 info warnings |
+| `flutter test` | ✅ Tous passent | 21 tests (widget + model + provider) |
 | APK Debug | ✅ Build OK | ~68 MB (arme tout) |
 | APK Release arm64 | ✅ Build OK | ~33 MB |
 | APK Release armeabi-v7a | ✅ Build OK | ~27 MB |
-| APK Release x86_64 | ✅ Build OK | ~35 MB |
 | CI/CD | ✅ Codemagic configuré | `codemagic.yaml` (5 workflows) + guide `CODEMAGIC.md` |
 | Lancement émulateur | ✅ APK installé et démarré | via `adb install` |
 
@@ -142,8 +141,8 @@
 
 | Métrique | Valeur |
 |---|---|
-| `flutter analyze` | 0 erreurs, 11 info warnings |
-| `flutter test` | 1/1 passed |
+| `flutter analyze` | 0 erreurs, 0 info warnings |
+| `flutter test` | 21/21 passed |
 | Phase 1 Auth/Navigation | ✅ 100% — Google Sign-In natif, role-aware branches, auto-logout 5j |
 | Phase 2 Upload/OCR | ✅ 100% — ML Kit OCR, compression, Edge Function validation |
 | Phase 3 Feed/Interactions | ✅ 100% — Video player, favorites, infinite scroll, likes, comments, WhatsApp |
@@ -151,11 +150,10 @@
 | Phase 5 Deployment | ✅ 100% — Codemagic 5 workflows, Sentry monitoring |
 | APK arm64 release | 32.6 MB |
 | APK armeabi-v7a release | 26.5 MB |
-| APK x86_64 release | 34.5 MB |
-| Dépendances actives | 31 packages (incl. sentry, google_sign_in) |
-| Fichiers Dart | ~46 fichiers |
-| LOC (lib/) | ~7 500 lignes estimées |
+| Dépendances actives | 32 packages (incl. sentry, google_sign_in) |
+| Fichiers Dart | ~50 fichiers Dart |
+| LOC (lib/) | ~8 500 lignes estimées |
 
 ---
 
-_Mis à jour le : 21/05/2026_
+_Mis à jour le : 22/05/2026_

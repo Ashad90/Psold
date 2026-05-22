@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:psold/core/router.dart';
+
+part 'notifications_provider.g.dart';
 
 class AppNotification {
   final String id;
@@ -60,7 +63,8 @@ class AppNotification {
   }
 }
 
-final notificationsProvider = FutureProvider<List<AppNotification>>((ref) async {
+@riverpod
+Future<List<AppNotification>> notifications(Ref ref) async {
   final supabase = ref.watch(supabaseClientProvider);
   final userId = supabase.auth.currentUser?.id;
   if (userId == null) return [];
@@ -73,9 +77,10 @@ final notificationsProvider = FutureProvider<List<AppNotification>>((ref) async 
       .limit(50);
 
   return (response as List).map((row) => AppNotification.fromMap(Map<String, dynamic>.from(row))).toList();
-});
+}
 
-final unreadNotificationsCountProvider = FutureProvider<int>((ref) async {
+@riverpod
+Future<int> unreadNotificationsCount(Ref ref) async {
   final supabase = ref.watch(supabaseClientProvider);
   final userId = supabase.auth.currentUser?.id;
   if (userId == null) return 0;
@@ -87,9 +92,10 @@ final unreadNotificationsCountProvider = FutureProvider<int>((ref) async {
       .eq('is_read', false);
 
   return (response as List).length;
-});
+}
 
-final markNotificationReadProvider = Provider.family<Future<void> Function(), String>((ref, notificationId) {
+@riverpod
+Future<void> Function() markNotificationRead(Ref ref, String notificationId) {
   return () async {
     final supabase = ref.watch(supabaseClientProvider);
     await supabase
@@ -99,9 +105,10 @@ final markNotificationReadProvider = Provider.family<Future<void> Function(), St
     ref.invalidate(notificationsProvider);
     ref.invalidate(unreadNotificationsCountProvider);
   };
-});
+}
 
-final markAllNotificationsReadProvider = Provider<Future<void> Function()>((ref) {
+@riverpod
+Future<void> Function() markAllNotificationsRead(Ref ref) {
   return () async {
     final supabase = ref.watch(supabaseClientProvider);
     final userId = supabase.auth.currentUser?.id;
@@ -116,4 +123,4 @@ final markAllNotificationsReadProvider = Provider<Future<void> Function()>((ref)
     ref.invalidate(notificationsProvider);
     ref.invalidate(unreadNotificationsCountProvider);
   };
-});
+}

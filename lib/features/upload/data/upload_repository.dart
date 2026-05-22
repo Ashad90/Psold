@@ -1,8 +1,12 @@
-
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-final uploadRepositoryProvider = Provider<UploadRepository>((ref) => UploadRepository());
+part 'upload_repository.g.dart';
+
+@riverpod
+UploadRepository uploadRepository(Ref ref) => UploadRepository();
 
 class UploadRepository {
   SupabaseClient get _supabase => Supabase.instance.client;
@@ -11,6 +15,18 @@ class UploadRepository {
     try {
       final fileName = '${merchantId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final bytes = await image.readAsBytes();
+      await _supabase.storage.from('products').uploadBinary(fileName, bytes);
+      final publicUrl = _supabase.storage.from('products').getPublicUrl(fileName);
+      return publicUrl;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<String?> uploadVideo(File videoFile, String merchantId) async {
+    try {
+      final fileName = '${merchantId}_${DateTime.now().millisecondsSinceEpoch}.mp4';
+      final bytes = await videoFile.readAsBytes();
       await _supabase.storage.from('products').uploadBinary(fileName, bytes);
       final publicUrl = _supabase.storage.from('products').getPublicUrl(fileName);
       return publicUrl;
@@ -50,6 +66,7 @@ class UploadRepository {
     required int quantity,
     required List<String> images,
     String? city,
+    String? videoUrl,
     bool validated = false,
     double? aiScore,
   }) async {
@@ -64,6 +81,7 @@ class UploadRepository {
       'quantity': quantity,
       'images': images,
       'city': city,
+      'video_url': videoUrl,
       'validated': validated,
       'ai_score': aiScore,
     });

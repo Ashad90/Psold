@@ -189,7 +189,7 @@ class _RegisterClientScreenState extends ConsumerState<RegisterClientScreen> {
                 keyboardType: TextInputType.phone,
                 decoration: InputDecoration(
                   hintText: '+23600000000',
-                  prefixIcon: Icon(Icons.chat_bubble_outline, color: PsoldColors.whatsapp),
+                  prefixIcon: const Icon(Icons.chat_bubble_outline, color: PsoldColors.whatsapp),
                   helperText: 'Pour être contacté par les marchands',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   filled: true,
@@ -245,7 +245,7 @@ class _RegisterClientScreenState extends ConsumerState<RegisterClientScreen> {
                     try {
                       await GoogleAuthService.instance.signIn();
                     } catch (e) {
-                      if (mounted) {
+                      if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
                         );

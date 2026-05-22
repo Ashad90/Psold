@@ -7,6 +7,7 @@ class PsoldColors {
   static const Color backgroundLight = Color(0xFFFDF5E6);
   static const Color backgroundDark = Color(0xFF000000);
   static const Color navBarActiveIndicator = Color(0xFFE1E0E1);
+  static const Color navBarActiveIndicatorDark = Color(0xFF000120);
   static const Color primary = Color(0xFFFF6B2B);
   static const Color whatsapp = Color(0xFF25D366);
   static const Color textPrimary = Color(0xFF1A1A1A);
@@ -65,7 +66,7 @@ final psoldLightTheme = ThemeData(
   brightness: Brightness.light,
   scaffoldBackgroundColor: PsoldColors.backgroundLight,
   colorScheme: ColorScheme.fromSeed(
-    seedColor: PsoldColors.primary,
+    seedColor: PsoldColors.backgroundLight,
     brightness: Brightness.light,
     surface: PsoldColors.backgroundLight,
   ),
@@ -82,13 +83,13 @@ final psoldDarkTheme = ThemeData(
   brightness: Brightness.dark,
   scaffoldBackgroundColor: PsoldColors.backgroundDark,
   colorScheme: ColorScheme.fromSeed(
-    seedColor: PsoldColors.primary,
+    seedColor: PsoldColors.backgroundDark,
     brightness: Brightness.dark,
     surface: PsoldColors.backgroundDark,
   ),
   navigationBarTheme: const NavigationBarThemeData(
     backgroundColor: PsoldColors.backgroundDark,
-    indicatorColor: PsoldColors.navBarActiveIndicator,
+    indicatorColor: PsoldColors.navBarActiveIndicatorDark,
     labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
   ),
   textTheme: _buildTextTheme(ThemeData.dark().textTheme),

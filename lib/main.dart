@@ -91,7 +91,7 @@ class _PsoldAppState extends ConsumerState<PsoldApp> {
 
   @override
   Widget build(BuildContext context) {
-    final locale = ref.watch(localeProvider);
+    final locale = ref.watch(localeNotifierProvider);
     ref.watch(merchantBackgroundLocationProvider);
 
     return MaterialApp.router(

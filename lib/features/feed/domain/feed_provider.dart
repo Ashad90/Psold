@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgresChangeEvent, PostgresChangeFilter, PostgresChangeFilterType, PostgresChangePayload;
 import 'package:psold/core/router.dart';
 import 'package:psold/shared/utils/feed_cache_service.dart';
+
+part 'feed_provider.g.dart';
 
 final feedFilterProvider = StateProvider<FeedFilter>((ref) => const FeedFilter());
 
@@ -40,19 +44,25 @@ class FeedState {
   }
 }
 
-class FeedNotifier extends StateNotifier<FeedState> {
-  final dynamic _supabase;
-  final Ref _ref;
-  final FeedCacheService _cacheService;
+@riverpod
+class FeedProducts extends _$FeedProducts {
+  dynamic _supabase;
+  FeedCacheService? _cacheService;
+  dynamic _channel;
   static const int _pageSize = 20;
 
-  FeedNotifier(this._supabase, this._ref, this._cacheService) : super(const FeedState(isLoading: true)) {
+  @override
+  FeedState build() {
+    _supabase = ref.read(supabaseClientProvider);
+    _cacheService = ref.read(feedCacheServiceProvider);
+    ref.onDispose(_cleanup);
     _initialize();
+    return const FeedState(isLoading: true);
   }
 
   Future<void> _initialize() async {
     try {
-      final cachedProducts = await _cacheService.getCachedProducts();
+      final cachedProducts = await _cacheService!.getCachedProducts();
       if (cachedProducts.isNotEmpty) {
         final products = cachedProducts.map((map) => Product.fromMap(map)).toList();
         state = FeedState(
@@ -61,18 +71,96 @@ class FeedNotifier extends StateNotifier<FeedState> {
           hasMore: products.length >= _pageSize,
           lastProduct: products.isNotEmpty ? products.last : null,
         );
+        _setupRealtimeSubscription();
         _loadFromNetworkInBackground();
         return;
       }
     } catch (_) {}
     await loadFirstPage();
+    _setupRealtimeSubscription();
+  }
+
+  void _setupRealtimeSubscription() {
+    try {
+      _channel = _supabase.channel('feed');
+      _channel!.onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'products',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'validated',
+          value: true,
+        ),
+        callback: (payload) {
+          _handleRealtimeChange(payload);
+        },
+      ).subscribe();
+    } catch (_) {}
+  }
+
+  void _handleRealtimeChange(PostgresChangePayload payload) {
+    try {
+      final event = payload.eventType;
+      final newRecord = payload.newRecord;
+      final oldRecord = payload.oldRecord;
+
+      if (event == PostgresChangeEvent.insert && newRecord.isNotEmpty) {
+        _handleInsert(newRecord);
+      } else if (event == PostgresChangeEvent.update && newRecord.isNotEmpty) {
+        _handleUpdate(newRecord);
+      } else if (event == PostgresChangeEvent.delete && oldRecord.isNotEmpty) {
+        _handleDelete(oldRecord);
+      }
+    } catch (_) {}
+  }
+
+  void _handleInsert(Map<String, dynamic> record) {
+    final filter = ref.read(feedFilterProvider);
+    if (filter.category != null && record['category'] != filter.category) return;
+    if (filter.radiusKm != null) return;
+
+    final product = Product.fromInsertPayload(record);
+    if (state.products.any((p) => p.id == product.id)) return;
+
+    state = state.copyWith(
+      products: [product, ...state.products],
+    );
+  }
+
+  void _handleUpdate(Map<String, dynamic> record) {
+    final product = Product.fromInsertPayload(record);
+    final filter = ref.read(feedFilterProvider);
+    if (filter.category != null && product.category != filter.category) {
+      state = state.copyWith(
+        products: state.products.where((p) => p.id != product.id).toList(),
+      );
+      return;
+    }
+    state = state.copyWith(
+      products: state.products.map((p) => p.id == product.id ? product : p).toList(),
+    );
+  }
+
+  void _handleDelete(Map<String, dynamic> record) {
+    final deletedId = record['id'] as String?;
+    if (deletedId != null) {
+      state = state.copyWith(
+        products: state.products.where((p) => p.id != deletedId).toList(),
+      );
+    }
+  }
+
+  void _cleanup() {
+    _channel?.unsubscribe();
+    _channel?.dispose();
   }
 
   Future<void> _loadFromNetworkInBackground() async {
     try {
-      final filter = _ref.read(feedFilterProvider);
+      final filter = ref.read(feedFilterProvider);
       final products = await _fetchPage(null, filter);
-      await _cacheService.cacheProducts(products);
+      await _cacheService!.cacheProducts(products);
       if (state.products.isEmpty) {
         state = FeedState(
           products: products,
@@ -87,10 +175,10 @@ class FeedNotifier extends StateNotifier<FeedState> {
   Future<void> loadFirstPage() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final filter = _ref.read(feedFilterProvider);
-      await _cacheService.cacheFilter(filter);
+      final filter = ref.read(feedFilterProvider);
+      await _cacheService!.cacheFilter(filter);
       final products = await _fetchPage(null, filter);
-      await _cacheService.cacheProducts(products);
+      await _cacheService!.cacheProducts(products);
       state = FeedState(
         products: products,
         isLoading: false,
@@ -98,7 +186,7 @@ class FeedNotifier extends StateNotifier<FeedState> {
         lastProduct: products.isNotEmpty ? products.last : null,
       );
     } catch (e) {
-      final cachedProducts = await _cacheService.getCachedProducts();
+      final cachedProducts = await _cacheService!.getCachedProducts();
       if (cachedProducts.isNotEmpty) {
         final products = cachedProducts.map((map) => Product.fromMap(map)).toList();
         state = FeedState(
@@ -118,7 +206,7 @@ class FeedNotifier extends StateNotifier<FeedState> {
     if (state.isLoadingMore || !state.hasMore) return;
     state = state.copyWith(isLoadingMore: true);
     try {
-      final filter = _ref.read(feedFilterProvider);
+      final filter = ref.read(feedFilterProvider);
       final products = await _fetchPage(state.lastProduct, filter);
       state = state.copyWith(
         products: [...state.products, ...products],
@@ -171,12 +259,6 @@ class FeedNotifier extends StateNotifier<FeedState> {
   }
 }
 
-final feedProductsProvider = StateNotifierProvider<FeedNotifier, FeedState>((ref) {
-  final supabase = ref.watch(supabaseClientProvider);
-  final cacheService = ref.watch(feedCacheServiceProvider);
-  return FeedNotifier(supabase, ref, cacheService);
-});
-
 class Product {
   final String id;
   final String merchantId;
@@ -204,6 +286,31 @@ class Product {
   const Product({required this.id, required this.merchantId, required this.title, this.description, required this.category, this.priceOriginal, required this.pricePromo, required this.expiryDate, required this.quantity, required this.images, this.videoUrl, this.city, required this.validated, this.aiScore, this.rejectionReason, required this.viewsCount, required this.createdAt, this.likesCount = 0, this.commentsCount = 0, this.isLikedByCurrentUser = false, this.merchantName, this.merchantWhatsapp});
 
   int get daysUntilExpiry => expiryDate.difference(DateTime.now()).inDays;
+
+  factory Product.fromInsertPayload(Map<String, dynamic> map) {
+    return Product(
+      id: map['id'] as String,
+      merchantId: map['merchant_id'] as String,
+      title: map['title'] as String,
+      description: map['description'] as String?,
+      category: map['category'] as String,
+      priceOriginal: map['price_original'] != null ? (map['price_original'] as num).toDouble() : null,
+      pricePromo: (map['price_promo'] as num).toDouble(),
+      expiryDate: DateTime.parse(map['expiry_date'] as String),
+      quantity: map['quantity'] as int? ?? 1,
+      images: (map['images'] as List<dynamic>?)?.cast<String>() ?? [],
+      videoUrl: map['video_url'] as String?,
+      city: map['city'] as String?,
+      validated: map['validated'] as bool? ?? false,
+      aiScore: map['ai_score'] != null ? (map['ai_score'] as num).toDouble() : null,
+      rejectionReason: map['rejection_reason'] as String?,
+      viewsCount: map['views_count'] as int? ?? 0,
+      createdAt: DateTime.parse(map['created_at'] as String),
+      likesCount: map['likes_count'] as int? ?? 0,
+      commentsCount: map['comments_count'] as int? ?? 0,
+      isLikedByCurrentUser: map['is_liked_by_current_user'] as bool? ?? false,
+    );
+  }
 
   factory Product.fromMap(Map<String, dynamic> map) {
     final profile = map['profiles'] as Map<String, dynamic>?;
@@ -234,19 +341,22 @@ class Product {
   }
 }
 
-final productDetailProvider = FutureProvider.family<Product, String>((ref, productId) async {
+@riverpod
+Future<Product> productDetail(Ref ref, String productId) async {
   final supabase = ref.watch(supabaseClientProvider);
   final response = await supabase.from('products').select('*, profiles(display_name, whatsapp)').eq('id', productId).single();
   return Product.fromMap(Map<String, dynamic>.from(response));
-});
+}
 
-final productLikesProvider = FutureProvider.family<int, String>((ref, productId) async {
+@riverpod
+Future<int> productLikes(Ref ref, String productId) async {
   final supabase = ref.watch(supabaseClientProvider);
   final response = await supabase.from('likes').select().eq('product_id', productId);
   return (response as List).length;
-});
+}
 
-final likeToggleProvider = Provider.family<Future<void> Function(), String>((ref, productId) {
+@riverpod
+Future<void> Function() likeToggle(Ref ref, String productId) {
   return () async {
     final supabase = ref.watch(supabaseClientProvider);
     final userId = supabase.auth.currentUser?.id;
@@ -260,7 +370,7 @@ final likeToggleProvider = Provider.family<Future<void> Function(), String>((ref
     ref.read(feedProductsProvider.notifier).refresh();
     ref.invalidate(productLikesProvider(productId));
   };
-});
+}
 
 class Comment {
   final String id;
@@ -278,13 +388,15 @@ class Comment {
   }
 }
 
-final productCommentsProvider = FutureProvider.family<List<Comment>, String>((ref, productId) async {
+@riverpod
+Future<List<Comment>> productComments(Ref ref, String productId) async {
   final supabase = ref.watch(supabaseClientProvider);
   final response = await supabase.from('comments').select('*, profiles(display_name)').eq('product_id', productId).order('created_at', ascending: false).limit(20);
   return (response as List).map((row) => Comment.fromMap(Map<String, dynamic>.from(row))).toList();
-});
+}
 
-final addCommentProvider = Provider.family<Future<void> Function(String), String>((ref, productId) {
+@riverpod
+Future<void> Function(String) addComment(Ref ref, String productId) {
   return (String content) async {
     final supabase = ref.watch(supabaseClientProvider);
     final userId = supabase.auth.currentUser?.id;
@@ -292,4 +404,4 @@ final addCommentProvider = Provider.family<Future<void> Function(String), String
     await supabase.from('comments').insert({'user_id': userId, 'product_id': productId, 'content': content});
     ref.invalidate(productCommentsProvider(productId));
   };
-});
+}

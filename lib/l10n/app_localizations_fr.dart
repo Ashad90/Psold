@@ -226,6 +226,54 @@ class AppLocalizationsFr extends AppLocalizations {
   String get uploadAddImage => 'Veuillez ajouter au moins une image';
 
   @override
+  String get uploadVideo => 'Vidéo du produit (optionnel)';
+
+  @override
+  String get uploadAddVideo => 'Ajouter une vidéo';
+
+  @override
+  String get uploadTitleHint => 'Ex: Yaourt nature expire bientôt';
+
+  @override
+  String get uploadDescriptionHint => 'Description supplémentaire...';
+
+  @override
+  String get uploadSelectDate => 'Sélectionner une date';
+
+  @override
+  String get uploadCityHint => 'Ex: Bangui';
+
+  @override
+  String get quantityHint => 'Ex: 5';
+
+  @override
+  String get uploadNotConnected => 'Utilisateur non connecté';
+
+  @override
+  String get uploadImageError => 'Erreur lors de l\'upload des images';
+
+  @override
+  String get uploadAIError => 'Erreur de validation IA';
+
+  @override
+  String get uploadPickError => 'Erreur lors de la sélection des images';
+
+  @override
+  String get uploadCameraError => 'Erreur lors de la capture';
+
+  @override
+  String get uploadVideoError => 'Erreur lors de la sélection vidéo';
+
+  @override
+  String get uploadNotValidated => 'Produit non validé';
+
+  @override
+  String get uploadOcrPrompt => 'Date non détectée — veuillez la saisir manuellement';
+
+  @override
+  String get profileUpdated => 'Profil mis à jour';
+
+  @override
   String get validationPending => 'Validation en cours…';
 
   @override
@@ -346,4 +394,42 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get begin => 'Commencer';
+
+  @override
+  String get dailyLimitReached => 'Limite quotidienne atteinte';
+
+  @override
+  String dailyLimitFormat(int images, int imageLimit, int videos, int videoLimit) {
+    return '$images/$imageLimit images · $videos/$videoLimit vidéos aujourd\'hui';
+  }
+
+  @override
+  String get premiumTitle => 'Passer au Premium';
+
+  @override
+  String get premiumDescription => 'Passez au Premium pour publier sans limite.';
+
+  @override
+  String get premiumCTA => 'Passer au Premium';
+
+  @override
+  String get dailyLimitFreeTier => '5 images · 2 vidéos par jour';
+
+  @override
+  String get goPremium => 'Passer au Premium';
+
+  @override
+  String get premiumActive => 'Premium Actif';
+
+  @override
+  String get premiumUnlimited => 'Téléchargements illimités';
+
+  @override
+  String get premiumLimitReached => 'Limite atteinte';
+
+  @override
+  String get contactSupport => 'Contactez le support pour activer Premium.';
+
+  @override
+  String get later => 'Plus tard';
 }
