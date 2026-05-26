@@ -33,7 +33,7 @@
 | Écran `/register` avec 2 cartes visuelles | ✅ | `lib/features/auth/presentation/register_choice_screen.dart` |
 | Formulaire `/register/merchant` | ✅ | `lib/features/auth/presentation/register_merchant_screen.dart` |
 | Formulaire `/register/client` | ✅ | `lib/features/auth/presentation/register_client_screen.dart` |
-| Écran `/onboarding` animé (Lottie) | ✅ | `lib/features/auth/presentation/onboarding_screen.dart` |
+| Écran `/onboarding` (3 slides avec skip/next) | ✅ | `lib/features/auth/presentation/onboarding_screen.dart` |
 | NavigationBar adaptée au rôle | ✅ | `_NavScaffold` — 5 items marchand / 4 items client |
 | Guard `/upload` → marchand only | ✅ | `lib/core/router.dart` |
 | Guard `/merchant/*` → marchand only | ✅ | `lib/core/router.dart` |
@@ -126,7 +126,7 @@
 - `lib/features/notifications/presentation/notifications_screen.dart` — Données réelles, icônes par type, "tout marquer lu"
 - `lib/features/settings/presentation/settings_screen.dart` — Carte profil, sélecteur thème, dialogue déconnexion, navigation `/profile`
 - `lib/features/product/presentation/product_detail_screen.dart` — Video player intégré (galerie + play/pause + progress)
-- `lib/features/feed/presentation/feed_screen.dart` — Badge vidéo sur ProductCard
+- `lib/features/feed/presentation/feed_screen.dart` — Badge vidéo sur ProductCard + état vide amélioré (CTA rôle-based)
 - `supabase/migrations/004_auto_create_profile_trigger.sql` — Trigger: skip auto-create si pas de rôle dans metadata
 - `android/app/src/main/AndroidManifest.xml` — Intent filter OAuth callback + WhatsApp intents
 - `pubspec.yaml` — Ajout `google_sign_in: ^6.2.1`
@@ -156,4 +156,4 @@
 
 ---
 
-_Mis à jour le : 22/05/2026_
+_Mis à jour le : 26/05/2026_

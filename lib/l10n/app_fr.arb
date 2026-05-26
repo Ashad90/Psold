@@ -143,5 +143,15 @@
   "premiumUnlimited": "Téléchargements illimités",
   "premiumLimitReached": "Limite atteinte",
   "contactSupport": "Contactez le support pour activer Premium.",
-  "later": "Plus tard"
+  "later": "Plus tard",
+  "onboardingSlide1Title": "Découvrez les bonnes affaires",
+  "onboardingSlide1Description": "Trouvez des produits frais à prix réduit près de chez vous",
+  "onboardingSlide2Title": "Vendez facilement vos surplus",
+  "onboardingSlide2Description": "Publiez vos produits en solde en quelques clics avec validation IA",
+  "onboardingSlide3Title": "Discutez directement avec les vendeurs",
+  "onboardingSlide3Description": "Contactez les marchands via WhatsApp pour finaliser vos achats",
+  "onboardingSkip": "Passer",
+  "onboardingNext": "Suivant",
+  "onboardingGetStarted": "Commencer",
+  "publishProduct": "Publier un produit"
 }

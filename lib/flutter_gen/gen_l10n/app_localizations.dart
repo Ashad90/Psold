@@ -926,6 +926,60 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Plus tard'**
   String get later;
+
+  /// No description provided for @onboardingSlide1Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Découvrez les bonnes affaires'**
+  String get onboardingSlide1Title;
+
+  /// No description provided for @onboardingSlide1Description.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trouvez des produits frais à prix réduit près de chez vous'**
+  String get onboardingSlide1Description;
+
+  /// No description provided for @onboardingSlide2Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vendez facilement vos surplus'**
+  String get onboardingSlide2Title;
+
+  /// No description provided for @onboardingSlide2Description.
+  ///
+  /// In fr, this message translates to:
+  /// **'Publiez vos produits en solde en quelques clics avec validation IA'**
+  String get onboardingSlide2Description;
+
+  /// No description provided for @onboardingSlide3Title.
+  ///
+  /// In fr, this message translates to:
+  /// **'Discutez directement avec les vendeurs'**
+  String get onboardingSlide3Title;
+
+  /// No description provided for @onboardingSlide3Description.
+  ///
+  /// In fr, this message translates to:
+  /// **'Contactez les marchands via WhatsApp pour finaliser vos achats'**
+  String get onboardingSlide3Description;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passer'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingGetStarted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commencer'**
+  String get onboardingGetStarted;
 }
 
 class _AppLocalizationsDelegate

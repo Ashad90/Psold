@@ -441,4 +441,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get later => 'Later';
+
+  @override
+  String get onboardingSlide1Title => 'Discover Discounted Deals';
+
+  @override
+  String get onboardingSlide1Description =>
+      'Find fresh products at reduced prices near you';
+
+  @override
+  String get onboardingSlide2Title => 'Sell Your Surplus Easily';
+
+  @override
+  String get onboardingSlide2Description =>
+      'List your discounted products in seconds with AI validation';
+
+  @override
+  String get onboardingSlide3Title => 'Chat Directly with Sellers';
+
+  @override
+  String get onboardingSlide3Description =>
+      'Contact merchants via WhatsApp to complete your purchases';
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String get onboardingGetStarted => 'Get Started';
 }

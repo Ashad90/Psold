@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lottie/lottie.dart';
 import 'package:psold/core/theme.dart';
 import 'package:psold/core/locale_provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:psold/flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:go_router/go_router.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -13,33 +12,45 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  bool _canContinue = false;
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+  int _currentPage = 0;
+  final PageController _pageController = PageController(initialPage: 0);
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this);
-    _startAnimation();
-  }
-
-  Future<void> _startAnimation() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (mounted) {
-      _controller.duration = const Duration(milliseconds: 3500);
-      _controller.forward();
-      await Future.delayed(const Duration(milliseconds: 3500));
-      if (mounted) {
-        setState(() => _canContinue = true);
-      }
-    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _pageController.dispose();
     super.dispose();
+  }
+
+  void _onPageChanged(int page) {
+    setState(() {
+      _currentPage = page;
+    });
+  }
+
+  void _onNextPressed() {
+    if (_currentPage < 2) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      // Last page - go to register
+      if (mounted) {
+        context.go('/register');
+      }
+    }
+  }
+
+  void _onSkipPressed() {
+    if (mounted) {
+      context.go('/register');
+    }
   }
 
   @override
@@ -51,114 +62,132 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Single
       backgroundColor: PsoldColors.backgroundLight,
       body: SafeArea(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Spacer(flex: 2),
-            SizedBox(
-              width: 200,
-              height: 200,
-              child: Lottie.asset(
-                'assets/animations/psold_logo_animation.json',
-                controller: _controller,
-                repeat: false,
-                onLoaded: (composition) {
-                  _controller.duration = composition.duration;
-                  _controller.forward();
-                },
-              ),
-            ),
-            const SizedBox(height: PsoldSpacing.lg),
-            Text(
-              l10n.appName,
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(fontWeight: FontWeight.w800, color: PsoldColors.textPrimary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: PsoldSpacing.sm),
-            Text(
-              l10n.tagline,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: PsoldColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const Spacer(flex: 3),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: PsoldSpacing.lg),
-              child: Column(
+            Expanded(
+              flex: 2,
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
                 children: [
-                  _LanguageSelector(locale: locale),
-                  const SizedBox(height: PsoldSpacing.lg),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _canContinue ? () => context.go('/register') : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _canContinue ? PsoldColors.primary : Colors.grey,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text(
-                        _canContinue ? 'Commencer' : 'Chargement...',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                      ),
-                    ),
+                  _buildOnboardingPage(
+                    context,
+                    l10n.onboardingSlide1Title,
+                    l10n.onboardingSlide1Description,
+                    'assets/images/psold_logo.png',
+                  ),
+                  _buildOnboardingPage(
+                    context,
+                    l10n.onboardingSlide2Title,
+                    l10n.onboardingSlide2Description,
+                    'assets/images/psold_logo.png',
+                  ),
+                  _buildOnboardingPage(
+                    context,
+                    l10n.onboardingSlide3Title,
+                    l10n.onboardingSlide3Description,
+                    'assets/images/psold_logo.png',
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: PsoldSpacing.xxl),
+            Container(
+              padding: const EdgeInsets.all(PsoldSpacing.md),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: _onSkipPressed,
+                    child: Text(
+                      l10n.onboardingSkip,
+                      style: TextStyle(
+                        color: PsoldColors.textSecondary,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      // Dots indicator
+                      ...List.generate(
+                        3,
+                        (index) => Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                          width: _currentPage == index ? 12.0 : 8.0,
+                          height: 8.0,
+                          decoration: BoxDecoration(
+                            color: _currentPage == index
+                                ? PsoldColors.primary
+                                : PsoldColors.textSecondary.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(4.0),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: PsoldSpacing.md),
+                      ElevatedButton(
+                        onPressed: _onNextPressed,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: PsoldColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: PsoldSpacing.lg,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          _currentPage < 2
+                              ? l10n.onboardingNext
+                              : l10n.onboardingGetStarted,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-}
 
-class _LanguageSelector extends ConsumerWidget {
-  final Locale locale;
-
-  const _LanguageSelector({required this.locale});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _LanguageChip(code: 'fr', label: 'FR', isSelected: locale.languageCode == 'fr', onTap: () => ref.read(localeNotifierProvider.notifier).setLocale('fr')),
-        const SizedBox(width: PsoldSpacing.sm),
-        _LanguageChip(code: 'en', label: 'EN', isSelected: locale.languageCode == 'en', onTap: () => ref.read(localeNotifierProvider.notifier).setLocale('en')),
-        const SizedBox(width: PsoldSpacing.sm),
-        _LanguageChip(code: 'ar', label: 'ع', isSelected: locale.languageCode == 'ar', onTap: () => ref.read(localeNotifierProvider.notifier).setLocale('ar')),
-      ],
-    );
-  }
-}
-
-class _LanguageChip extends StatelessWidget {
-  final String code;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _LanguageChip({required this.code, required this.label, required this.isSelected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: PsoldSpacing.md, vertical: PsoldSpacing.sm),
-        decoration: BoxDecoration(
-          color: isSelected ? PsoldColors.primary : Colors.transparent,
-          border: Border.all(color: isSelected ? PsoldColors.primary : Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black87,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+  Widget _buildOnboardingPage(
+      BuildContext context, String title, String description, String imagePath) {
+    return Padding(
+      padding: const EdgeInsets.all(PsoldSpacing.lg),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset(
+            imagePath,
+            width: 200,
+            height: 200,
           ),
-        ),
+          const SizedBox(height: PsoldSpacing.xl),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: PsoldColors.textPrimary,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: PsoldSpacing.md),
+          Text(
+            description,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: PsoldColors.textSecondary,
+                  height: 1.5,
+                ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

@@ -443,4 +443,34 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get later => 'Plus tard';
+
+  @override
+  String get onboardingSlide1Title => 'Découvrez les bonnes affaires';
+
+  @override
+  String get onboardingSlide1Description =>
+      'Trouvez des produits frais à prix réduit près de chez vous';
+
+  @override
+  String get onboardingSlide2Title => 'Vendez facilement vos surplus';
+
+  @override
+  String get onboardingSlide2Description =>
+      'Publiez vos produits en solde en quelques clics avec validation IA';
+
+  @override
+  String get onboardingSlide3Title => 'Discutez directement avec les vendeurs';
+
+  @override
+  String get onboardingSlide3Description =>
+      'Contactez les marchands via WhatsApp pour finaliser vos achats';
+
+  @override
+  String get onboardingSkip => 'Passer';
+
+  @override
+  String get onboardingNext => 'Suivant';
+
+  @override
+  String get onboardingGetStarted => 'Commencer';
 }

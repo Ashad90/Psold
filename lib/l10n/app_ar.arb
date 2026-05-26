@@ -143,5 +143,15 @@
   "premiumUnlimited": "تحميلات غير محدودة",
   "premiumLimitReached": "تم الوصول إلى الحد الأقصى",
   "contactSupport": "اتصل بالدعم لتفعيل بريميوم.",
-  "later": "لاحقًا"
+  "later": "لاحقًا",
+  "onboardingSlide1Title": "اكتشف العروض المخفضة",
+  "onboardingSlide1Description": "ابحث عن منتجات طازجة بأسعار مخفضة بالقرب منك",
+  "onboardingSlide2Title": "بع فائضك بسهولة",
+  "onboardingSlide2Description": "قم بنشر منتجاتك المخفضة في بضع ثوانٍ مع التحقق بالذكاء الاصطناعي",
+  "onboardingSlide3Title": "تواصل مباشرة مع البائعين",
+  "onboardingSlide3Description": "اتصل بالتجار عبر الواتساب لإتمام مشترياتك",
+  "onboardingSkip": "تخطي",
+  "onboardingNext": "التالي",
+  "onboardingGetStarted": "ابدأ",
+  "publishProduct": "نشر منتج"
 }

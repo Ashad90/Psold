@@ -143,5 +143,15 @@
   "premiumUnlimited": "Unlimited uploads",
   "premiumLimitReached": "Limit reached",
   "contactSupport": "Contact support to activate Premium.",
-  "later": "Later"
+  "later": "Later",
+  "onboardingSlide1Title": "Discover Discounted Deals",
+  "onboardingSlide1Description": "Find fresh products at reduced prices near you",
+  "onboardingSlide2Title": "Sell Your Surplus Easily",
+  "onboardingSlide2Description": "List your discounted products in seconds with AI validation",
+  "onboardingSlide3Title": "Chat Directly with Sellers",
+  "onboardingSlide3Description": "Contact merchants via WhatsApp to complete your purchases",
+  "onboardingSkip": "Skip",
+  "onboardingNext": "Next",
+  "onboardingGetStarted": "Get Started",
+  "publishProduct": "Post a product"
 }

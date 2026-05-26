@@ -6,6 +6,7 @@ import 'package:psold/features/feed/domain/feed_provider.dart';
 import 'package:psold/shared/utils/location_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:psold/flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:psold/core/router.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
   final bool isMerchant;
@@ -104,7 +105,52 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     }
 
     if (feedState.products.isEmpty) {
-      return Center(child: Text(AppLocalizations.of(context)!.feedEmpty));
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(PsoldSpacing.lg),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.inventory_outlined,
+                size: 64,
+                color: PsoldColors.textSecondary.withOpacity(0.5),
+              ),
+              const SizedBox(height: PsoldSpacing.md),
+              Text(
+                AppLocalizations.of(context)!.feedEmpty,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: PsoldColors.textSecondary,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: PsoldSpacing.xl),
+              if (ref.watch(currentUserProvider.notifier)?.state?.isMerchant == true)
+                ElevatedButton.icon(
+                  onPressed: () => context.go('/upload'),
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: Text(AppLocalizations.of(context)!.publishProduct),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PsoldColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: PsoldSpacing.lg,
+                      vertical: PsoldSpacing.md,
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  'Revenez plus tard pour découvrir de nouvelles offres !',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: PsoldColors.textSecondary,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+            ],
+          ),
+        ),
+      );
     }
 
     return RefreshIndicator(

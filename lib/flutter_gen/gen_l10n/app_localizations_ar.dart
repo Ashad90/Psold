@@ -440,4 +440,34 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get later => 'لاحقًا';
+
+  @override
+  String get onboardingSlide1Title => 'اكتشف العروض المخفضة';
+
+  @override
+  String get onboardingSlide1Description =>
+      'ابحث عن منتجات طازجة بأسعار مخفضة بالقرب منك';
+
+  @override
+  String get onboardingSlide2Title => 'بع فائضك بسهولة';
+
+  @override
+  String get onboardingSlide2Description =>
+      'قم بنشر منتجاتك المخفضة في بضع ثوانٍ مع التحقق بالذكاء الاصطناعي';
+
+  @override
+  String get onboardingSlide3Title => 'تواصل مباشرة مع البائعين';
+
+  @override
+  String get onboardingSlide3Description =>
+      'اتصل بالتجار عبر الواتساب لإتمام مشترياتك';
+
+  @override
+  String get onboardingSkip => 'تخطي';
+
+  @override
+  String get onboardingNext => 'التالي';
+
+  @override
+  String get onboardingGetStarted => 'ابدأ';
 }
